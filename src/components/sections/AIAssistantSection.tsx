@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { 
   MessageSquare, 
@@ -6,26 +7,80 @@ import {
   Bot,
   User,
   Sparkles,
-  Volume2
+  Volume2,
+  Loader2
 } from "lucide-react";
+import { streamChat, type ChatMessage } from "@/lib/chatService";
+import { useToast } from "@/hooks/use-toast";
 
-const chatMessages = [
+const initialMessages: ChatMessage[] = [
   {
     role: "assistant",
-    content: "नमस्ते! मैं आपका सहायक हूं। मैं नागरिक समस्याओं, सरकारी योजनाओं और फॉर्म संबंधी सवालों में मदद कर सकता हूं।",
-    translation: "Hello! I'm your assistant. I can help with civic issues, government schemes, and form-related questions."
-  },
-  {
-    role: "user",
-    content: "PM Kisan scheme ke liye kaise apply karun?"
-  },
-  {
-    role: "assistant",
-    content: "PM Kisan Yojana के लिए आवेदन करने के लिए:\n\n1. pmkisan.gov.in पर जाएं\n2. 'New Farmer Registration' पर क्लिक करें\n3. आधार नंबर और राज्य चुनें\n4. फॉर्म भरें और जमीन के दस्तावेज़ अपलोड करें\n\nक्या आप चाहते हैं कि मैं फॉर्म समझाऊं?",
+    content: "नमस्ते! मैं आपका सहायक हूं। मैं नागरिक समस्याओं, सरकारी योजनाओं और फॉर्म संबंधी सवालों में मदद कर सकता हूं।\n\nHello! I'm your assistant. I can help with civic issues, government schemes, and form-related questions.",
   },
 ];
 
 export function AIAssistantSection() {
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [inputValue, setInputValue] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSend = async () => {
+    const trimmedInput = inputValue.trim();
+    if (!trimmedInput || isLoading) return;
+
+    const userMessage: ChatMessage = { role: "user", content: trimmedInput };
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
+
+    let assistantContent = "";
+
+    const updateAssistantMessage = (chunk: string) => {
+      assistantContent += chunk;
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && prev.length > 1 && prev[prev.length - 2]?.role === "user") {
+          return prev.map((m, i) => 
+            i === prev.length - 1 ? { ...m, content: assistantContent } : m
+          );
+        }
+        return [...prev, { role: "assistant", content: assistantContent }];
+      });
+    };
+
+    await streamChat({
+      messages: [...messages, userMessage],
+      onDelta: updateAssistantMessage,
+      onDone: () => setIsLoading(false),
+      onError: (error) => {
+        setIsLoading(false);
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <section className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -49,11 +104,10 @@ export function AIAssistantSection() {
 
               {/* Chat Messages */}
               <div className="p-4 space-y-4 h-80 overflow-y-auto">
-                {chatMessages.map((message, index) => (
+                {messages.map((message, index) => (
                   <div 
                     key={index}
-                    className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""} animate-slide-up`}
-                    style={{ animationDelay: `${index * 0.2}s` }}
+                    className={`flex gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
                   >
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                       message.role === "assistant" ? "bg-primary/10 text-primary" : "bg-secondary/10 text-secondary"
@@ -68,29 +122,39 @@ export function AIAssistantSection() {
                       }`}>
                         <p className="whitespace-pre-line">{message.content}</p>
                       </div>
-                      {message.translation && (
-                        <p className="text-xs text-muted-foreground mt-1 italic">
-                          {message.translation}
-                        </p>
-                      )}
                     </div>
                   </div>
                 ))}
+                {isLoading && messages[messages.length - 1]?.role === "user" && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-primary/10 text-primary">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div className="bg-muted p-3 rounded-2xl rounded-tl-none">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Chat Input */}
               <div className="p-4 border-t border-border">
                 <div className="flex items-center gap-2">
-                  <Button variant="voice" size="icon">
+                  <Button variant="voice" size="icon" disabled>
                     <Mic className="w-5 h-5" />
                   </Button>
                   <input 
                     type="text"
-                    placeholder="Type or speak your question..."
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your question..."
                     className="flex-1 bg-muted rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    disabled={isLoading}
                   />
-                  <Button size="icon">
-                    <Send className="w-5 h-5" />
+                  <Button size="icon" onClick={handleSend} disabled={isLoading || !inputValue.trim()}>
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                   </Button>
                 </div>
               </div>
@@ -106,7 +170,7 @@ export function AIAssistantSection() {
             
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
               Your Personal{" "}
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">Civic Assistant</span>
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow pb-1">Civic Assistant</span>
             </h2>
             
             <p className="text-lg text-muted-foreground mb-8">
