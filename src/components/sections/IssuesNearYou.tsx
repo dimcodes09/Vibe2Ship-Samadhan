@@ -1,5 +1,7 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   MapPin, 
   ThumbsUp, 
@@ -18,56 +20,75 @@ type IssueStatus = "reported" | "in-progress" | "resolved";
 
 interface Issue {
   id: string;
-  title: string;
+  titleEn: string;
+  titleHi: string;
   category: string;
-  location: string;
+  categoryHi: string;
+  locationEn: string;
+  locationHi: string;
   distance: string;
   status: IssueStatus;
   supports: number;
-  timeAgo: string;
-  image?: string;
+  timeAgoEn: string;
+  timeAgoHi: string;
 }
 
 const issues: Issue[] = [
   {
     id: "1",
-    title: "Broken water pipeline causing flooding",
+    titleEn: "Broken water pipeline causing flooding",
+    titleHi: "टूटी पानी की पाइपलाइन से बाढ़",
     category: "Water Supply",
-    location: "Sector 21, Main Road",
-    distance: "0.5 km",
+    categoryHi: "जल आपूर्ति",
+    locationEn: "Sector 21, Main Road",
+    locationHi: "सेक्टर 21, मुख्य सड़क",
+    distance: "0.5",
     status: "in-progress",
     supports: 156,
-    timeAgo: "2 hours ago",
+    timeAgoEn: "2 hours ago",
+    timeAgoHi: "2 घंटे पहले",
   },
   {
     id: "2",
-    title: "Garbage not collected for 3 days",
+    titleEn: "Garbage not collected for 3 days",
+    titleHi: "3 दिनों से कचरा नहीं उठाया गया",
     category: "Sanitation",
-    location: "Green Park Colony",
-    distance: "0.8 km",
+    categoryHi: "स्वच्छता",
+    locationEn: "Green Park Colony",
+    locationHi: "ग्रीन पार्क कॉलोनी",
+    distance: "0.8",
     status: "reported",
     supports: 89,
-    timeAgo: "5 hours ago",
+    timeAgoEn: "5 hours ago",
+    timeAgoHi: "5 घंटे पहले",
   },
   {
     id: "3",
-    title: "Street lights not working",
+    titleEn: "Street lights not working",
+    titleHi: "स्ट्रीट लाइट्स काम नहीं कर रही हैं",
     category: "Electricity",
-    location: "Market Area, Block B",
-    distance: "1.2 km",
+    categoryHi: "बिजली",
+    locationEn: "Market Area, Block B",
+    locationHi: "मार्केट एरिया, ब्लॉक बी",
+    distance: "1.2",
     status: "resolved",
     supports: 234,
-    timeAgo: "1 day ago",
+    timeAgoEn: "1 day ago",
+    timeAgoHi: "1 दिन पहले",
   },
   {
     id: "4",
-    title: "Pothole on main highway causing accidents",
+    titleEn: "Pothole on main highway causing accidents",
+    titleHi: "मुख्य राजमार्ग पर गड्ढे से दुर्घटनाएं",
     category: "Roads",
-    location: "NH-48 Junction",
-    distance: "1.5 km",
+    categoryHi: "सड़कें",
+    locationEn: "NH-48 Junction",
+    locationHi: "NH-48 जंक्शन",
+    distance: "1.5",
     status: "in-progress",
     supports: 312,
-    timeAgo: "3 days ago",
+    timeAgoEn: "3 days ago",
+    timeAgoHi: "3 दिन पहले",
   },
 ];
 
@@ -78,25 +99,27 @@ const categoryIcons: Record<string, React.ReactNode> = {
   "Roads": <Construction className="w-4 h-4" />,
 };
 
-const statusConfig: Record<IssueStatus, { label: string; class: string; icon: React.ReactNode }> = {
-  reported: { 
-    label: "Reported", 
-    class: "status-reported",
-    icon: <AlertTriangle className="w-3 h-3" />
-  },
-  "in-progress": { 
-    label: "In Progress", 
-    class: "status-in-progress",
-    icon: <Timer className="w-3 h-3" />
-  },
-  resolved: { 
-    label: "Resolved", 
-    class: "status-resolved",
-    icon: <CheckCircle2 className="w-3 h-3" />
-  },
-};
-
 export function IssuesNearYou() {
+  const { t, language } = useLanguage();
+
+  const statusConfig: Record<IssueStatus, { labelKey: string; class: string; icon: React.ReactNode }> = {
+    reported: { 
+      labelKey: "issues.reported", 
+      class: "status-reported",
+      icon: <AlertTriangle className="w-3 h-3" />
+    },
+    "in-progress": { 
+      labelKey: "issues.inProgress", 
+      class: "status-in-progress",
+      icon: <Timer className="w-3 h-3" />
+    },
+    resolved: { 
+      labelKey: "issues.resolved", 
+      class: "status-resolved",
+      icon: <CheckCircle2 className="w-3 h-3" />
+    },
+  };
+
   return (
     <section id="dashboard" className="py-20 bg-background">
       <div className="container mx-auto px-4">
@@ -105,33 +128,40 @@ export function IssuesNearYou() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-full text-primary text-sm font-medium mb-4">
               <MapPin className="w-4 h-4" />
-              Near Your Location
+              {t("issues.badge")}
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
-              Issues Near You
+              {t("issues.title")}
             </h2>
             <p className="text-muted-foreground">
-              Support problems affecting your community. Together, we make change happen.
+              {t("issues.subtitle")}
             </p>
           </div>
-          <Button variant="outline" className="shrink-0">
-            View All Issues
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          <Link to="/report">
+            <Button variant="outline" className="shrink-0">
+              {t("issues.viewAll")}
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
         </div>
 
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
-          <StatCard value="23" label="Active Issues" trend="+5 this week" color="warning" />
-          <StatCard value="156" label="Resolved" trend="This month" color="accent" />
-          <StatCard value="18hrs" label="Avg. Response" trend="↓ 2hrs faster" color="info" />
-          <StatCard value="1.2K" label="Community Supports" trend="+200 today" color="primary" />
+          <StatCard value="23" labelKey="issues.activeIssues" trend={language === "en" ? "+5 this week" : "+5 इस हफ्ते"} color="warning" />
+          <StatCard value="156" labelKey="issues.resolved" trend={language === "en" ? "This month" : "इस महीने"} color="accent" />
+          <StatCard value="18hrs" labelKey="issues.avgResponseTime" trend={language === "en" ? "↓ 2hrs faster" : "↓ 2 घंटे तेज"} color="info" />
+          <StatCard value="1.2K" labelKey="issues.communitySupports" trend={language === "en" ? "+200 today" : "+200 आज"} color="primary" />
         </div>
 
         {/* Issues Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {issues.map((issue, index) => (
-            <IssueCard key={issue.id} issue={issue} index={index} />
+            <IssueCard 
+              key={issue.id} 
+              issue={issue} 
+              index={index} 
+              statusConfig={statusConfig}
+            />
           ))}
         </div>
       </div>
@@ -141,15 +171,16 @@ export function IssuesNearYou() {
 
 function StatCard({ 
   value, 
-  label, 
+  labelKey, 
   trend, 
   color 
 }: { 
   value: string; 
-  label: string; 
+  labelKey: string; 
   trend: string; 
   color: "primary" | "accent" | "warning" | "info";
 }) {
+  const { t } = useLanguage();
   const colorClasses = {
     primary: "bg-primary/10 text-primary",
     accent: "bg-accent/10 text-accent",
@@ -160,13 +191,22 @@ function StatCard({
   return (
     <div className="bg-card rounded-2xl p-5 border border-border shadow-card">
       <p className={`text-3xl font-bold mb-1 ${colorClasses[color].split(" ")[1]}`}>{value}</p>
-      <p className="text-sm font-medium text-foreground mb-1">{label}</p>
+      <p className="text-sm font-medium text-foreground mb-1">{t(labelKey)}</p>
       <p className="text-xs text-muted-foreground">{trend}</p>
     </div>
   );
 }
 
-function IssueCard({ issue, index }: { issue: Issue; index: number }) {
+function IssueCard({ 
+  issue, 
+  index,
+  statusConfig
+}: { 
+  issue: Issue; 
+  index: number;
+  statusConfig: Record<IssueStatus, { labelKey: string; class: string; icon: React.ReactNode }>;
+}) {
+  const { t, language } = useLanguage();
   const status = statusConfig[issue.status];
   const categoryIcon = categoryIcons[issue.category] || <AlertTriangle className="w-4 h-4" />;
 
@@ -184,27 +224,27 @@ function IssueCard({ issue, index }: { issue: Issue; index: number }) {
             </div>
             <div>
               <Badge variant="secondary" className="text-xs mb-1">
-                {issue.category}
+                {language === "en" ? issue.category : issue.categoryHi}
               </Badge>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <MapPin className="w-3 h-3" />
-                {issue.distance} away
+                {issue.distance} km {t("issues.away")}
               </div>
             </div>
           </div>
           <div className={`status-badge ${status.class}`}>
             {status.icon}
-            {status.label}
+            {t(status.labelKey)}
           </div>
         </div>
 
         {/* Content */}
         <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-          {issue.title}
+          {language === "en" ? issue.titleEn : issue.titleHi}
         </h3>
         <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
           <MapPin className="w-3 h-3" />
-          {issue.location}
+          {language === "en" ? issue.locationEn : issue.locationHi}
         </p>
 
         {/* Footer */}
@@ -212,12 +252,12 @@ function IssueCard({ issue, index }: { issue: Issue; index: number }) {
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {issue.timeAgo}
+              {language === "en" ? issue.timeAgoEn : issue.timeAgoHi}
             </span>
           </div>
           <Button variant="ghost" size="sm" className="gap-2 text-primary hover:text-primary">
             <ThumbsUp className="w-4 h-4" />
-            Support ({issue.supports})
+            {t("issues.support")} ({issue.supports})
           </Button>
         </div>
       </div>

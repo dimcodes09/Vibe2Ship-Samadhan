@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   MapPin, 
   FileText, 
@@ -10,13 +12,15 @@ import {
   Clock
 } from "lucide-react";
 
-const stats = [
-  { value: "50K+", label: "Issues Resolved", icon: CheckCircle2 },
-  { value: "2.5L+", label: "Active Citizens", icon: Users },
-  { value: "24hr", label: "Avg Response", icon: Clock },
-];
-
 export function HeroSection() {
+  const { t } = useLanguage();
+
+  const stats = [
+    { value: "50K+", labelKey: "hero.issuesResolved", icon: CheckCircle2 },
+    { value: "2.5L+", labelKey: "hero.activeCitizens", icon: Users },
+    { value: "24hr", labelKey: "hero.avgResponse", icon: Clock },
+  ];
+
   return (
     <section className="relative min-h-screen hero-gradient pt-24 pb-16 overflow-hidden">
       {/* Background Pattern */}
@@ -31,36 +35,40 @@ export function HeroSection() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary text-sm font-medium mb-8 animate-fade-in">
             <Shield className="w-4 h-4" />
-            <span>AI-Powered Civic Governance Platform</span>
+            <span>{t("hero.badge")}</span>
           </div>
 
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-6 animate-slide-up leading-tight">
-            Your Voice,{" "}
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">Your City,</span>
+            {t("hero.title1")}{" "}
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-glow">{t("hero.title2")}</span>
             <br />
-            Your <span className="text-secondary">Samadhan</span>
+            {t("hero.title3")} <span className="text-secondary">Samadhan</span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: "0.1s" }}>
-            Report civic issues, access government schemes, and get AI-powered assistance for all your civic needs—in your language, with your voice.
+            {t("hero.subtitle")}
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-slide-up" style={{ animationDelay: "0.2s" }}>
-            <Button variant="hero" className="group">
-              <MapPin className="w-5 h-5" />
-              Report an Issue
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button variant="heroSecondary">
-              <Shield className="w-5 h-5" />
-              Explore Schemes
-            </Button>
+            <Link to="/report">
+              <Button variant="hero" className="group">
+                <MapPin className="w-5 h-5" />
+                {t("hero.reportIssue")}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+            <Link to="/schemes">
+              <Button variant="heroSecondary">
+                <Shield className="w-5 h-5" />
+                {t("hero.exploreSchemes")}
+              </Button>
+            </Link>
             <Button variant="voice" size="lg" className="sm:w-auto">
               <Mic className="w-5 h-5" />
-              Speak Now
+              {t("hero.speakNow")}
             </Button>
           </div>
 
@@ -68,20 +76,23 @@ export function HeroSection() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-16">
             <QuickActionCard
               icon={<MapPin className="w-6 h-6" />}
-              title="Issues Near You"
-              description="See and support problems in your area"
+              title={t("hero.issuesNearYou")}
+              description={t("hero.issuesDesc")}
+              href="/dashboard"
               delay="0.3s"
             />
             <QuickActionCard
               icon={<FileText className="w-6 h-6" />}
-              title="Form Analyzer"
-              description="AI explains any government form"
+              title={t("hero.formAnalyzer")}
+              description={t("hero.formDesc")}
+              href="/analyzer"
               delay="0.4s"
             />
             <QuickActionCard
               icon={<Shield className="w-6 h-6" />}
-              title="Verified Schemes"
-              description="Check eligibility for benefits"
+              title={t("hero.verifiedSchemes")}
+              description={t("hero.schemesDesc")}
+              href="/schemes"
               delay="0.5s"
             />
           </div>
@@ -89,12 +100,12 @@ export function HeroSection() {
           {/* Stats */}
           <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 animate-fade-in" style={{ animationDelay: "0.6s" }}>
             {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
+              <div key={stat.labelKey} className="text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <stat.icon className="w-5 h-5 text-primary" />
                   <span className="text-3xl font-bold text-foreground">{stat.value}</span>
                 </div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
+                <p className="text-sm text-muted-foreground">{t(stat.labelKey)}</p>
               </div>
             ))}
           </div>
@@ -111,16 +122,18 @@ function QuickActionCard({
   icon, 
   title, 
   description, 
+  href,
   delay 
 }: { 
   icon: React.ReactNode; 
   title: string; 
   description: string; 
+  href: string;
   delay: string;
 }) {
   return (
-    <a
-      href="#"
+    <Link
+      to={href}
       className="group glass-card p-6 rounded-2xl text-left hover:shadow-xl hover:-translate-y-1 transition-all animate-slide-up"
       style={{ animationDelay: delay }}
     >
@@ -129,6 +142,6 @@ function QuickActionCard({
       </div>
       <h3 className="font-semibold text-foreground mb-1">{title}</h3>
       <p className="text-sm text-muted-foreground">{description}</p>
-    </a>
+    </Link>
   );
 }
