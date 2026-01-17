@@ -98,6 +98,54 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  // Set up realtime subscription for issues and supports
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reported_issues',
+        },
+        (payload) => {
+          console.log('Issue change:', payload);
+          if (payload.eventType === 'INSERT') {
+            setIssues(prev => [payload.new as Issue, ...prev]);
+            setStats(prev => ({
+              ...prev,
+              active: prev.active + 1,
+            }));
+          } else if (payload.eventType === 'UPDATE') {
+            setIssues(prev => prev.map(issue => 
+              issue.id === payload.new.id ? payload.new as Issue : issue
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setIssues(prev => prev.filter(issue => issue.id !== payload.old.id));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'issue_supports',
+        },
+        (payload) => {
+          console.log('Support change:', payload);
+          // Refresh issues to get updated support counts
+          fetchIssues();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const fetchIssues = async () => {
     try {
       const { data, error } = await supabase
