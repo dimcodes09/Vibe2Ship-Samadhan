@@ -14,7 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      notification_preferences: {
+        Row: {
+          created_at: string
+          document_reminders: boolean | null
+          email_notifications: boolean | null
+          id: string
+          issue_updates: boolean | null
+          push_notifications: boolean | null
+          scheme_alerts: boolean | null
+          sms_notifications: boolean | null
+          updated_at: string
+          user_id: string
+          weekly_digest: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          document_reminders?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          issue_updates?: boolean | null
+          push_notifications?: boolean | null
+          scheme_alerts?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          user_id: string
+          weekly_digest?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          document_reminders?: boolean | null
+          email_notifications?: boolean | null
+          id?: string
+          issue_updates?: boolean | null
+          push_notifications?: boolean | null
+          scheme_alerts?: boolean | null
+          sms_notifications?: boolean | null
+          updated_at?: string
+          user_id?: string
+          weekly_digest?: boolean | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          avatar_url: string | null
+          city: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          pincode: string | null
+          preferred_language: string | null
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          pincode?: string | null
+          preferred_language?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          avatar_url?: string | null
+          city?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          pincode?: string | null
+          preferred_language?: string | null
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reported_issues: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_urls: string[] | null
+          latitude: number | null
+          location: string | null
+          longitude: number | null
+          status: string
+          supports_count: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_urls?: string[] | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          status?: string
+          supports_count?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_urls?: string[] | null
+          latitude?: number | null
+          location?: string | null
+          longitude?: number | null
+          status?: string
+          supports_count?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
