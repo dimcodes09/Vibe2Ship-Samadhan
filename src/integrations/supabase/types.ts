@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      issue_supports: {
+        Row: {
+          created_at: string
+          id: string
+          issue_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issue_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issue_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issue_supports_issue_id_fkey"
+            columns: ["issue_id"]
+            isOneToOne: false
+            referencedRelation: "reported_issues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           created_at: string
