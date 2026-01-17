@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { 
   MapPin, 
   Phone, 
@@ -9,22 +11,6 @@ import {
   ExternalLink
 } from "lucide-react";
 
-const quickLinks = [
-  { label: "Report Issue", href: "#report" },
-  { label: "Track Status", href: "#dashboard" },
-  { label: "Government Schemes", href: "#schemes" },
-  { label: "Form Analyzer", href: "#analyzer" },
-  { label: "Document Locker", href: "#documents" },
-];
-
-const resources = [
-  { label: "Help Center", href: "#" },
-  { label: "Privacy Policy", href: "#" },
-  { label: "Terms of Service", href: "#" },
-  { label: "Accessibility", href: "#" },
-  { label: "RTI Portal", href: "#", external: true },
-];
-
 const socialLinks = [
   { icon: <Facebook className="w-5 h-5" />, href: "#", label: "Facebook" },
   { icon: <Twitter className="w-5 h-5" />, href: "#", label: "Twitter" },
@@ -33,6 +19,24 @@ const socialLinks = [
 ];
 
 export function Footer() {
+  const { t, language } = useLanguage();
+
+  const quickLinks = [
+    { labelKey: "nav.report", href: "/report" },
+    { labelKey: "nav.dashboard", href: "/dashboard" },
+    { labelKey: "nav.schemes", href: "/schemes" },
+    { labelKey: "nav.analyzer", href: "/analyzer" },
+    { labelKey: "nav.documents", href: "/documents" },
+  ];
+
+  const resources = [
+    { labelKey: "footer.helpCenter", href: "#" },
+    { labelKey: "footer.privacyPolicy", href: "#" },
+    { labelKey: "footer.terms", href: "#" },
+    { label: language === "en" ? "Accessibility" : "सुलभता", href: "#" },
+    { label: language === "en" ? "RTI Portal" : "RTI पोर्टल", href: "#", external: true },
+  ];
+
   return (
     <footer className="bg-foreground text-background">
       <div className="container mx-auto px-4">
@@ -40,7 +44,7 @@ export function Footer() {
         <div className="py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <a href="#" className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-xl">स</span>
               </div>
@@ -48,9 +52,9 @@ export function Footer() {
                 <h3 className="font-bold text-xl text-background">Samadhan</h3>
                 <p className="text-xs text-background/60">समाधान</p>
               </div>
-            </a>
+            </Link>
             <p className="text-background/70 text-sm mb-6">
-              AI-powered civic governance platform connecting citizens with government services seamlessly.
+              {t("footer.tagline")}
             </p>
             <div className="flex gap-3">
               {socialLinks.map((social) => (
@@ -68,16 +72,16 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="font-semibold text-background mb-4">Quick Links</h4>
+            <h4 className="font-semibold text-background mb-4">{t("footer.quickLinks")}</h4>
             <ul className="space-y-3">
               {quickLinks.map((link) => (
-                <li key={link.label}>
-                  <a 
-                    href={link.href}
+                <li key={link.labelKey}>
+                  <Link
+                    to={link.href}
                     className="text-background/70 hover:text-background text-sm transition-colors"
                   >
-                    {link.label}
-                  </a>
+                    {t(link.labelKey)}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -85,15 +89,15 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <h4 className="font-semibold text-background mb-4">Resources</h4>
+            <h4 className="font-semibold text-background mb-4">{t("footer.resources")}</h4>
             <ul className="space-y-3">
-              {resources.map((link) => (
-                <li key={link.label}>
+              {resources.map((link, index) => (
+                <li key={index}>
                   <a 
                     href={link.href}
                     className="text-background/70 hover:text-background text-sm transition-colors inline-flex items-center gap-1"
                   >
-                    {link.label}
+                    {'labelKey' in link ? t(link.labelKey) : link.label}
                     {link.external && <ExternalLink className="w-3 h-3" />}
                   </a>
                 </li>
@@ -103,7 +107,9 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="font-semibold text-background mb-4">Contact Us</h4>
+            <h4 className="font-semibold text-background mb-4">
+              {t("footer.contactUs")}
+            </h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -127,10 +133,12 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="py-6 border-t border-background/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-background/50 text-sm text-center sm:text-left">
-            © 2025 Samadhan. An initiative of Government of India.
+            © {new Date().getFullYear()} Samadhan. {t("footer.rights")}
           </p>
           <div className="flex items-center gap-6">
-            <span className="text-background/50 text-xs">Made with ❤️ for every citizen</span>
+            <span className="text-background/50 text-xs">
+              {language === "en" ? "Made with ❤️ for every citizen" : "हर नागरिक के लिए ❤️ से बनाया गया"}
+            </span>
           </div>
         </div>
       </div>

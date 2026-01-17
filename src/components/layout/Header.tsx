@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/hooks/useAuth";
 import { 
   Menu, 
   X, 
@@ -14,8 +15,17 @@ import {
   MessageSquare,
   Shield,
   FolderLock,
-  LogIn
+  LogIn,
+  LogOut,
+  Loader2
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { labelKey: "nav.dashboard", href: "/dashboard", icon: MapPin },
@@ -28,6 +38,7 @@ const navItems = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { user, loading, signOut } = useAuth();
   const location = useLocation();
 
   const toggleLanguage = () => {
@@ -35,6 +46,10 @@ export function Header() {
   };
 
   const isActive = (href: string) => location.pathname === href;
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border">
@@ -97,18 +112,60 @@ export function Header() {
               </span>
             </Button>
 
-            {/* Sign In Button */}
-            <Link to="/signin">
-              <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
-                <LogIn className="w-4 h-4" />
-                {t("nav.signin")}
+            {/* User Menu or Sign In */}
+            {loading ? (
+              <Button variant="ghost" size="iconSm" disabled>
+                <Loader2 className="w-4 h-4 animate-spin" />
               </Button>
-            </Link>
-
-            {/* User Menu */}
-            <Button variant="ghost" size="iconSm" className="sm:hidden">
-              <User className="w-4 h-4" />
-            </Button>
+            ) : user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="iconSm" className="relative">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                      <User className="w-4 h-4" />
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="px-2 py-1.5">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center gap-2">
+                      <User className="w-4 h-4" />
+                      {language === "en" ? "My Profile" : "मेरी प्रोफ़ाइल"}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile?tab=issues" className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      {language === "en" ? "My Issues" : "मेरी समस्याएं"}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile?tab=notifications" className="flex items-center gap-2">
+                      <Bell className="w-4 h-4" />
+                      {language === "en" ? "Notifications" : "अधिसूचनाएं"}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    {language === "en" ? "Sign Out" : "साइन आउट"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/signin">
+                <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
+                  <LogIn className="w-4 h-4" />
+                  {t("nav.signin")}
+                </Button>
+              </Link>
+            )}
 
             {/* Mobile Menu Toggle */}
             <Button
@@ -144,22 +201,47 @@ export function Header() {
               
               {/* Auth Links */}
               <div className="mt-2 pt-2 border-t border-border space-y-1">
-                <Link
-                  to="/signin"
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <LogIn className="w-5 h-5" />
-                  {t("nav.signin")}
-                </Link>
-                <Link
-                  to="/signup"
-                  className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary bg-primary/10 rounded-lg"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <User className="w-5 h-5" />
-                  {t("nav.signup")}
-                </Link>
+                {user ? (
+                  <>
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="w-5 h-5" />
+                      {language === "en" ? "My Profile" : "मेरी प्रोफ़ाइल"}
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-destructive hover:bg-muted rounded-lg transition-colors w-full"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      {language === "en" ? "Sign Out" : "साइन आउट"}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/signin"
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <LogIn className="w-5 h-5" />
+                      {t("nav.signin")}
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-primary bg-primary/10 rounded-lg"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="w-5 h-5" />
+                      {t("nav.signup")}
+                    </Link>
+                  </>
+                )}
               </div>
               
               <div className="mt-2 pt-2 border-t border-border">
