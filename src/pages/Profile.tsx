@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/sections/Footer";
+import { BackgroundPattern } from "@/components/BackgroundPattern";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -223,7 +224,8 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <BackgroundPattern />
       <Header />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
