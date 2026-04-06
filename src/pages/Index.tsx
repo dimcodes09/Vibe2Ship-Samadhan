@@ -6,10 +6,12 @@ import { FormAnalyzerSection } from "@/components/sections/FormAnalyzerSection";
 import { AIAssistantSection } from "@/components/sections/AIAssistantSection";
 import { DocumentLockerSection } from "@/components/sections/DocumentLockerSection";
 import { Footer } from "@/components/sections/Footer";
+import { BackgroundPattern } from "@/components/BackgroundPattern";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      <BackgroundPattern />
       <Header />
       <main>
         <HeroSection />
