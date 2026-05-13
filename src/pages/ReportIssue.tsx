@@ -45,6 +45,14 @@ const issueSchema = z.object({
   location: z.string().trim().min(5, "Location must be at least 5 characters").max(500, "Location must be less than 500 characters"),
 });
 
+const detectionToCategory = (cls: string): string | null => {
+  const c = cls.toLowerCase();
+  if (c.includes("pothole")) return "roads";
+  if (c.includes("garbage") || c.includes("trash") || c.includes("waste")) return "sanitation";
+  if (c.includes("civic")) return "buildings";
+  return null;
+};
+
 const ReportIssue = () => {
   const { language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
@@ -57,6 +65,54 @@ const ReportIssue = () => {
   const [location, setLocation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectedClasses, setDetectedClasses] = useState<string[]>([]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setAnnotatedImage(null);
+    setDetectedClasses([]);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      const base64 = dataUrl.split(",")[1];
+
+      setDetecting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("detect-issue", {
+          body: { imageBase64: base64 },
+        });
+        if (error) throw error;
+        if (data?.classes?.length) {
+          setDetectedClasses(data.classes);
+          if (data.annotatedImage) setAnnotatedImage(`data:image/jpeg;base64,${data.annotatedImage}`);
+          const mapped = detectionToCategory(data.top);
+          if (mapped) setSelectedCategory(mapped);
+          toast({
+            title: language === "en" ? "Detection complete" : "पहचान पूर्ण",
+            description: `${language === "en" ? "Detected" : "पाया गया"}: ${data.classes.join(", ")}`,
+          });
+        } else {
+          toast({
+            title: language === "en" ? "No issues detected" : "कोई समस्या नहीं मिली",
+            description: language === "en" ? "Please select a category manually." : "कृपया श्रेणी मैन्युअल रूप से चुनें।",
+          });
+        }
+      } catch (err: any) {
+        toast({ title: "Detection failed", description: err.message, variant: "destructive" });
+      } finally {
+        setDetecting(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const getCategoryLabel = (id: string) => {
     const cat = categories.find(c => c.id === id);
@@ -101,6 +157,15 @@ const ReportIssue = () => {
     setIsSubmitting(true);
 
     try {
+      let imageUrls: string[] = [];
+      if (imageFile) {
+        const path = `${user.id}/${Date.now()}-${imageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const { error: upErr } = await supabase.storage.from("issue-images").upload(path, imageFile);
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("issue-images").getPublicUrl(path);
+        imageUrls = [pub.publicUrl];
+      }
+
       const { error } = await supabase.from("reported_issues").insert({
         user_id: user.id,
         title: result.data.title,
@@ -108,6 +173,7 @@ const ReportIssue = () => {
         category: getCategoryLabel(result.data.category),
         location: result.data.location,
         status: "reported",
+        image_urls: imageUrls.length ? imageUrls : null,
       });
 
       if (error) throw error;
@@ -277,22 +343,38 @@ const ReportIssue = () => {
                 )}
               </div>
 
-              {/* Photo Upload (placeholder) */}
+              {/* Photo Upload + Detection */}
               <div className="space-y-2">
                 <Label>
-                  {language === "en" ? "Add Photos (Optional)" : "फोटो जोड़ें (वैकल्पिक)"}
+                  {language === "en" ? "Add Photo (AI Detection)" : "फोटो जोड़ें (AI पहचान)"}
                 </Label>
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
+                <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  {imagePreview ? (
+                    <img src={annotatedImage || imagePreview} alt="preview" className="max-h-64 mx-auto rounded-lg" />
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                        <Camera className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {language === "en" ? "Upload to auto-detect issue" : "स्वतः पहचान के लिए अपलोड करें"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                    </>
+                  )}
+                </label>
+                {detecting && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {language === "en" ? "Analyzing image..." : "छवि विश्लेषण हो रहा है..."}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {language === "en" ? "Click to upload or drag and drop" : "अपलोड करने के लिए क्लिक करें या खींचें और छोड़ें"}
+                )}
+                {detectedClasses.length > 0 && (
+                  <p className="text-sm text-primary font-medium">
+                    {language === "en" ? "Detected" : "पाया गया"}: {detectedClasses.join(", ")}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG up to 10MB
-                  </p>
-                </div>
+                )}
               </div>
 
               {/* Voice Description */}

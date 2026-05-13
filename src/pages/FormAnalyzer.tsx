@@ -1,6 +1,5 @@
 import { Header } from "@/components/layout/Header";
-import { FormAnalyzerSection } from "@/components/sections/FormAnalyzerSection";
-import { AIAssistantSection } from "@/components/sections/AIAssistantSection";
+import { AnalyzerAndAssistant } from "@/components/sections/FormAnalyzerSection";
 import { Footer } from "@/components/sections/Footer";
 import { BackgroundPattern } from "@/components/BackgroundPattern";
 
@@ -10,8 +9,8 @@ const FormAnalyzer = () => {
       <BackgroundPattern />
       <Header />
       <main className="pt-16">
-        <FormAnalyzerSection />
-        <AIAssistantSection />
+        <AnalyzerAndAssistant />
+        
       </main>
       <Footer />
     </div>
