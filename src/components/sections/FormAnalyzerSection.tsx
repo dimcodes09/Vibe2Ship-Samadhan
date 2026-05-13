@@ -56,7 +56,7 @@ export function AnalyzerAndAssistant() {
     if (!isSpeechSupported) return;
 
     const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.lang = "hi-IN";
@@ -86,7 +86,7 @@ export function AnalyzerAndAssistant() {
   const handleSend = async () => {
     if (!inputValue.trim()) return;
 
-    const userMsg = { role: "user", content: inputValue };
+    const userMsg = { role: "user" as const, content: inputValue };
     setMessages((prev) => [...prev, userMsg]);
     setInputValue("");
     setIsLoading(true);
@@ -100,7 +100,7 @@ export function AnalyzerAndAssistant() {
         setMessages((prev) => [
           ...prev.slice(0, -1),
           userMsg,
-          { role: "assistant", content: assistantText },
+          { role: "assistant" as const, content: assistantText },
         ]);
       },
       onDone: () => setIsLoading(false),
