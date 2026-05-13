@@ -157,6 +157,15 @@ const ReportIssue = () => {
     setIsSubmitting(true);
 
     try {
+      let imageUrls: string[] = [];
+      if (imageFile) {
+        const path = `${user.id}/${Date.now()}-${imageFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const { error: upErr } = await supabase.storage.from("issue-images").upload(path, imageFile);
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage.from("issue-images").getPublicUrl(path);
+        imageUrls = [pub.publicUrl];
+      }
+
       const { error } = await supabase.from("reported_issues").insert({
         user_id: user.id,
         title: result.data.title,
@@ -164,6 +173,7 @@ const ReportIssue = () => {
         category: getCategoryLabel(result.data.category),
         location: result.data.location,
         status: "reported",
+        image_urls: imageUrls.length ? imageUrls : null,
       });
 
       if (error) throw error;
@@ -333,22 +343,38 @@ const ReportIssue = () => {
                 )}
               </div>
 
-              {/* Photo Upload (placeholder) */}
+              {/* Photo Upload + Detection */}
               <div className="space-y-2">
                 <Label>
-                  {language === "en" ? "Add Photos (Optional)" : "फोटो जोड़ें (वैकल्पिक)"}
+                  {language === "en" ? "Add Photo (AI Detection)" : "फोटो जोड़ें (AI पहचान)"}
                 </Label>
-                <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
-                    <Camera className="w-6 h-6 text-muted-foreground" />
+                <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                  {imagePreview ? (
+                    <img src={annotatedImage || imagePreview} alt="preview" className="max-h-64 mx-auto rounded-lg" />
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                        <Camera className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        {language === "en" ? "Upload to auto-detect issue" : "स्वतः पहचान के लिए अपलोड करें"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                    </>
+                  )}
+                </label>
+                {detecting && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {language === "en" ? "Analyzing image..." : "छवि विश्लेषण हो रहा है..."}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {language === "en" ? "Click to upload or drag and drop" : "अपलोड करने के लिए क्लिक करें या खींचें और छोड़ें"}
+                )}
+                {detectedClasses.length > 0 && (
+                  <p className="text-sm text-primary font-medium">
+                    {language === "en" ? "Detected" : "पाया गया"}: {detectedClasses.join(", ")}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    PNG, JPG up to 10MB
-                  </p>
-                </div>
+                )}
               </div>
 
               {/* Voice Description */}
