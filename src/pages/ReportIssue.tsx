@@ -45,6 +45,14 @@ const issueSchema = z.object({
   location: z.string().trim().min(5, "Location must be at least 5 characters").max(500, "Location must be less than 500 characters"),
 });
 
+const detectionToCategory = (cls: string): string | null => {
+  const c = cls.toLowerCase();
+  if (c.includes("pothole")) return "roads";
+  if (c.includes("garbage") || c.includes("trash") || c.includes("waste")) return "sanitation";
+  if (c.includes("civic")) return "buildings";
+  return null;
+};
+
 const ReportIssue = () => {
   const { language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
@@ -57,6 +65,54 @@ const ReportIssue = () => {
   const [location, setLocation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [annotatedImage, setAnnotatedImage] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detectedClasses, setDetectedClasses] = useState<string[]>([]);
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setAnnotatedImage(null);
+    setDetectedClasses([]);
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setImagePreview(dataUrl);
+      const base64 = dataUrl.split(",")[1];
+
+      setDetecting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("detect-issue", {
+          body: { imageBase64: base64 },
+        });
+        if (error) throw error;
+        if (data?.classes?.length) {
+          setDetectedClasses(data.classes);
+          if (data.annotatedImage) setAnnotatedImage(`data:image/jpeg;base64,${data.annotatedImage}`);
+          const mapped = detectionToCategory(data.top);
+          if (mapped) setSelectedCategory(mapped);
+          toast({
+            title: language === "en" ? "Detection complete" : "पहचान पूर्ण",
+            description: `${language === "en" ? "Detected" : "पाया गया"}: ${data.classes.join(", ")}`,
+          });
+        } else {
+          toast({
+            title: language === "en" ? "No issues detected" : "कोई समस्या नहीं मिली",
+            description: language === "en" ? "Please select a category manually." : "कृपया श्रेणी मैन्युअल रूप से चुनें।",
+          });
+        }
+      } catch (err: any) {
+        toast({ title: "Detection failed", description: err.message, variant: "destructive" });
+      } finally {
+        setDetecting(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const getCategoryLabel = (id: string) => {
     const cat = categories.find(c => c.id === id);
