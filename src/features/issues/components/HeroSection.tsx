@@ -6,7 +6,6 @@ import {
   MapPin, 
   FileText, 
   Shield, 
-  Mic, 
   ArrowRight,
   CheckCircle2,
   Users,
@@ -67,10 +66,6 @@ export function HeroSection() {
                 {t("hero.exploreSchemes")}
               </Button>
             </Link>
-            <Button variant="voice" size="lg" className="sm:w-auto">
-              <Mic className="w-5 h-5" />
-              {t("hero.speakNow")}
-            </Button>
           </div>
 
           {/* Quick Action Cards */}

@@ -9,7 +9,6 @@ import {
   Menu, 
   X, 
   Globe, 
-  Mic, 
   Bell, 
   User,
   FileText,
@@ -110,11 +109,6 @@ export const Header = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>
               <span className="text-xs font-medium">
                 {language === "en" ? "English" : "हिंदी"}
               </span>
-            </Button>
-
-            {/* Voice Assistant */}
-            <Button variant="voice" size="iconSm" className="hidden sm:flex">
-              <Mic className="w-4 h-4" />
             </Button>
 
             {/* Notifications */}
