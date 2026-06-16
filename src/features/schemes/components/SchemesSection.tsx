@@ -207,14 +207,14 @@ export function SchemesSection() {
   };
 
   const computedEligible = useMemo(() => {
-    if (!hasCalculated) return eligibleSchemes;
+    if (!hasCalculated) return [];
     return schemes.filter((s) => calculatedResults[s.id]?.isEligible);
-  }, [hasCalculated, eligibleSchemes, schemes, calculatedResults]);
+  }, [hasCalculated, schemes, calculatedResults]);
 
   const computedOther = useMemo(() => {
-    if (!hasCalculated) return otherSchemes;
+    if (!hasCalculated) return schemes;
     return schemes.filter((s) => !calculatedResults[s.id]?.isEligible);
-  }, [hasCalculated, otherSchemes, schemes, calculatedResults]);
+  }, [hasCalculated, schemes, calculatedResults]);
 
   const displayedSchemes =
     activeTab === "eligible" ? computedEligible : [...computedEligible, ...computedOther];
@@ -452,9 +452,13 @@ export function SchemesSection() {
             }
             description={
               activeTab === "eligible"
-                ? (language === "en"
-                  ? "Try adjusting the calculator settings to match other criteria."
-                  : "अन्य मानदंडों से मिलान करने के लिए कैलकुलेटर सेटिंग्स को समायोजित करने का प्रयास करें।")
+                ? (hasCalculated
+                  ? (language === "en"
+                    ? "Try adjusting the calculator settings to match other criteria."
+                    : "अन्य मानदंडों से मिलान करने के लिए कैलकुलेटर सेटिंग्स को समायोजित करने का प्रयास करें।")
+                  : (language === "en"
+                    ? "Use the Interactive Eligibility Calculator above to analyze welfare schemes for you."
+                    : "अपने लिए कल्याणकारी योजनाओं का विश्लेषण करने के लिए ऊपर दिए गए इंटरएक्टिव पात्रता कैलकुलेटर का उपयोग करें।"))
                 : (language === "en"
                   ? "We couldn't find any schemes in the database."
                   : "हमें डेटाबेस में कोई योजना नहीं मिली।")
