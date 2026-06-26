@@ -39,7 +39,7 @@ export const issueRepository = {
     return data as IssueResponse[];
   },
 
-  async insertIssue(issue: Omit<IssueResponse, "id" | "created_at" | "updated_at" | "supports_count" | "latitude" | "longitude">): Promise<IssueResponse> {
+  async insertIssue(issue: Omit<IssueResponse, "id" | "created_at" | "updated_at" | "supports_count">): Promise<IssueResponse> {
     const { data, error } = await supabase
       .from("reported_issues")
       .insert({
@@ -50,6 +50,8 @@ export const issueRepository = {
         location: issue.location,
         status: issue.status,
         image_urls: issue.image_urls,
+        latitude: issue.latitude,
+        longitude: issue.longitude,
       })
       .select()
       .single();

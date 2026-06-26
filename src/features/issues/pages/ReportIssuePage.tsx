@@ -161,6 +161,14 @@ export default function ReportIssuePage() {
             {errors.location && (
               <p className="text-sm text-destructive">{errors.location}</p>
             )}
+            <p className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1.5">
+              <span className="shrink-0">💡</span>
+              <span>
+                {language === "en" 
+                  ? "Enabling location allows the community to automatically merge duplicate issues and display your report on the live map."
+                  : "स्थान सक्षम करने से समुदाय को स्वचालित रूप से डुप्लिकेट समस्याओं को संयोजित करने और लाइव मानचित्र पर आपके रिपोर्ट को दिखाने में मदद मिलती है।"}
+              </span>
+            </p>
           </div>
 
           {/* Photo Upload + Detection */}

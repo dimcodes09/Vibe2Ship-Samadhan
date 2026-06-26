@@ -29,6 +29,8 @@ export const issueService = {
       imageUrls: raw.image_urls || [],
       supportsCount: raw.supports_count || 0,
       masterIssueId: raw.master_issue_id || null,
+      latitude: raw.latitude,
+      longitude: raw.longitude,
       createdAt: new Date(raw.created_at),
     };
   },
@@ -41,7 +43,7 @@ export const issueService = {
 
   async reportNewIssue(
     userId: string,
-    input: { title: string; description: string; category: string; location: string },
+    input: { title: string; description: string; category: string; location: string; latitude?: number | null; longitude?: number | null },
     imageFile: File | null,
     activeLanguage: "en" | "hi"
   ): Promise<Issue> {
@@ -63,6 +65,8 @@ export const issueService = {
       location: input.location,
       status: STATUSES.REPORTED,
       image_urls: imageUrls.length ? imageUrls : null,
+      latitude: input.latitude || null,
+      longitude: input.longitude || null,
     });
 
     return this.mapResponseToDomain(raw);

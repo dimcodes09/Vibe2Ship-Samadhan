@@ -12,5 +12,7 @@ export interface Issue {
   imageUrls: string[];
   supportsCount: number;
   masterIssueId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   createdAt: Date;
 }

@@ -188,6 +188,28 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     stopListeningRef.current = stop;
   }, [isRecording, activeLanguage, toast]);
 
+  const getCurrentCoordinates = (): Promise<{ latitude: number | null; longitude: number | null }> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined" || !navigator.geolocation) {
+        resolve({ latitude: null, longitude: null });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          resolve({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+        },
+        (error) => {
+          logger.warn("Geolocation permission or capture failed:", error.message);
+          resolve({ latitude: null, longitude: null });
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -223,9 +245,15 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     setIsSubmitting(true);
 
     try {
+      const coords = await getCurrentCoordinates();
+
       await issueService.reportNewIssue(
         user.id,
-        validationResult.data as { title: string; description: string; category: string; location: string },
+        {
+          ...(validationResult.data as { title: string; description: string; category: string; location: string }),
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        },
         imageFile,
         activeLanguage
       );
