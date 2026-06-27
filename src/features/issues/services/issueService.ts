@@ -32,6 +32,7 @@ export const issueService = {
       latitude: raw.latitude,
       longitude: raw.longitude,
       createdAt: new Date(raw.created_at),
+      updatedAt: raw.updated_at ? new Date(raw.updated_at) : undefined,
     };
   },
 
@@ -85,5 +86,10 @@ export const issueService = {
   async getIssueById(issueId: string): Promise<Issue> {
     const raw = await issueRepository.fetchIssueById(issueId);
     return this.mapResponseToDomain(raw);
+  },
+
+  async fetchAllIssuesForMap(): Promise<Issue[]> {
+    const raw = await issueRepository.fetchAllIssuesForMap();
+    return raw.map((r) => this.mapResponseToDomain(r));
   },
 };

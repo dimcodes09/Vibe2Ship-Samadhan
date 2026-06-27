@@ -1,6 +1,7 @@
 import { useLanguage } from "@/app/providers/LanguageProvider";
 import { useAuth } from "@/features/auth";
 import { useReportIssue } from "../hooks/useReportIssue";
+import LocationPicker from "../components/LocationPicker";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
@@ -40,6 +41,12 @@ export default function ReportIssuePage() {
     setDescription,
     location,
     setLocation,
+    latitude,
+    setLatitude,
+    longitude,
+    setLongitude,
+    geocodeStatus,
+    setGeocodeStatus,
     selectedCategory,
     setSelectedCategory,
     isSubmitting,
@@ -142,33 +149,24 @@ export default function ReportIssuePage() {
             )}
           </div>
 
-          {/* Location */}
-          <div className="space-y-2">
-            <Label htmlFor="location">
-              {language === "en" ? "Location" : "स्थान"} *
-            </Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="location"
-                placeholder={language === "en" ? "Enter address or landmark" : "पता या लैंडमार्क दर्ज करें"}
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="pl-10"
-                maxLength={500}
-              />
-            </div>
+          {/* Location Picker Section */}
+          <div className="space-y-3">
+            <LocationPicker
+              location={location}
+              latitude={latitude}
+              longitude={longitude}
+              onChange={(address, lat, lng) => {
+                setLocation(address);
+                setLatitude(lat);
+                setLongitude(lng);
+              }}
+              geocodeStatus={geocodeStatus}
+              setGeocodeStatus={setGeocodeStatus}
+              language={language}
+            />
             {errors.location && (
-              <p className="text-sm text-destructive">{errors.location}</p>
+              <p className="text-sm text-destructive mt-1">{errors.location}</p>
             )}
-            <p className="text-xs text-muted-foreground mt-1.5 flex items-start gap-1.5">
-              <span className="shrink-0">💡</span>
-              <span>
-                {language === "en" 
-                  ? "Enabling location allows the community to automatically merge duplicate issues and display your report on the live map."
-                  : "स्थान सक्षम करने से समुदाय को स्वचालित रूप से डुप्लिकेट समस्याओं को संयोजित करने और लाइव मानचित्र पर आपके रिपोर्ट को दिखाने में मदद मिलती है।"}
-              </span>
-            </p>
           </div>
 
           {/* Photo Upload + Detection */}

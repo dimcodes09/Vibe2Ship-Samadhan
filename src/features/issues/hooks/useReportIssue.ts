@@ -25,7 +25,13 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  
+  // Coordinates and Address state updated by LocationPicker component
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "resolving" | "success" | "failed">("idle");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -188,28 +194,6 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     stopListeningRef.current = stop;
   }, [isRecording, activeLanguage, toast]);
 
-  const getCurrentCoordinates = (): Promise<{ latitude: number | null; longitude: number | null }> => {
-    return new Promise((resolve) => {
-      if (typeof window === "undefined" || !navigator.geolocation) {
-        resolve({ latitude: null, longitude: null });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-        },
-        (error) => {
-          logger.warn("Geolocation permission or capture failed:", error.message);
-          resolve({ latitude: null, longitude: null });
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -245,14 +229,12 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     setIsSubmitting(true);
 
     try {
-      const coords = await getCurrentCoordinates();
-
       await issueService.reportNewIssue(
         user.id,
         {
           ...(validationResult.data as { title: string; description: string; category: string; location: string }),
-          latitude: coords.latitude,
-          longitude: coords.longitude,
+          latitude,
+          longitude,
         },
         imageFile,
         activeLanguage
@@ -285,6 +267,12 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     setDescription,
     location,
     setLocation,
+    latitude,
+    setLatitude,
+    longitude,
+    setLongitude,
+    geocodeStatus,
+    setGeocodeStatus,
     selectedCategory,
     setSelectedCategory,
     isSubmitting,

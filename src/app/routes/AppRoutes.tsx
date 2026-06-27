@@ -16,6 +16,7 @@ const Documents = lazy(() => import("@/features/documents/pages/DocumentsPage"))
 const Auth = lazy(() => import("@/features/auth/pages/AuthPage"));
 const Profile = lazy(() => import("@/features/profile/pages/ProfilePage"));
 const Admin = lazy(() => import("@/features/admin/pages/AdminPage"));
+const CivicMap = lazy(() => import("@/features/civic-map/pages/CivicMapPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 function PageLoader() {
@@ -37,6 +38,7 @@ export function AppRoutes() {
           <Route path={ROUTES.SIGN_UP} element={<Auth />} />
           <Route path={ROUTES.SCHEMES} element={<Schemes />} />
           <Route path={ROUTES.FORM_ANALYZER} element={<FormAnalyzer />} />
+          <Route path={ROUTES.CIVIC_MAP} element={<CivicMap />} />
           
           {/* Protected Citizen Routes */}
           <Route

@@ -10,6 +10,7 @@ export const ROUTES = {
   SIGN_UP: "/signup",
   PROFILE: "/profile",
   ADMIN: "/admin",
+  CIVIC_MAP: "/map",
 } as const;
 
 export type RoutePath = typeof ROUTES[keyof typeof ROUTES];

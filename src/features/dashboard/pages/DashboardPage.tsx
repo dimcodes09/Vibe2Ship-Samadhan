@@ -40,8 +40,15 @@ import {
   TreePine,
   Building2,
   User,
-  Calendar
+  Calendar,
+  BarChart3,
+  Map,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { AnalyticsPanel } from "../components/AnalyticsPanel";
+import { AIInsightPanel } from "@/features/issues/components/AIInsightPanel";
 
 const categoryIcons: Record<string, React.ReactNode> = {
   "Water Supply": <Droplets className="w-4 h-4" />,
@@ -86,15 +93,33 @@ export default function DashboardPage() {
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [selectedIssueProfile, setSelectedIssueProfile] = useState<{ fullName: string } | null>(null);
   const [loadingSelected, setLoadingSelected] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        (err) => {
+          logger.info("Geolocation declined or unavailable:", err);
+        },
+        { enableHighAccuracy: false, timeout: 5000 }
+      );
+    }
+  }, []);
 
   const {
     issues,
+    allIssues,
     supportedIssues,
     loading,
     supportingId,
     stats,
     handleSupport,
-  } = useDashboardIssues(user, language);
+    isNearbyMode,
+  } = useDashboardIssues(user, language, userCoords);
 
   const getTimeAgo = (date: Date) => getTimeAgoUtil(date, language);
 
@@ -160,6 +185,10 @@ export default function DashboardPage() {
     setSearchParams({ issueId });
   };
 
+  const handleViewOnMap = (issueId: string) => {
+    navigate(`${ROUTES.CIVIC_MAP}?issueId=${issueId}`);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Section Header */}
@@ -185,34 +214,80 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard 
-          value={stats.activeCount.toString()} 
-          labelKey="issues.activeIssues" 
-          trend={language === "en" ? "Active now" : "अभी सक्रिय"} 
-          color="warning" 
+          value={stats.aiClassifiedCount.toString()} 
+          label={language === "en" ? "AI Classifications" : "एआई वर्गीकरण"}
+          trend={language === "en" ? "🤖 Powered by Gemini" : "🤖 जेमिनी द्वारा"} 
+          color="primary"
         />
         <StatCard 
-          value={stats.resolvedCount.toString()} 
-          labelKey="issues.resolved" 
-          trend={language === "en" ? "All time" : "कुल"} 
-          color="accent" 
+          value={stats.duplicateCount.toString()} 
+          label={language === "en" ? "Duplicates Prevented" : "रोके गए डुप्लिकेट"}
+          trend={language === "en" ? "Duplicate Issues Prevented" : "रोके गए डुप्लिकेट मुद्दे"} 
+          color="accent"
         />
         <StatCard 
-          value="18hrs" 
-          labelKey="issues.avgResponseTime" 
-          trend={language === "en" ? "↓ Faster" : "↓ तेज"} 
+          value={stats.avgResolutionDays !== null ? `${stats.avgResolutionDays} days` : (language === "en" ? "No resolved issues yet" : "कोई हल मुद्दा नहीं")} 
+          label={language === "en" ? "Avg Resolution" : "औसत समाधान"}
+          trend={language === "en" ? "Dynamic resolution average" : "गतिशील समाधान औसत"} 
           color="info" 
         />
         <StatCard 
-          value={stats.totalSupportsCount.toString()} 
-          labelKey="issues.communitySupports" 
-          trend={language === "en" ? "Total" : "कुल"} 
-          color="primary" 
+          value={stats.geoTaggedCount.toString()} 
+          label={language === "en" ? "Geo-tagged Reports" : "जियो-टैग की गई रिपोर्ट"}
+          trend={language === "en" ? `${Math.round((stats.geoTaggedCount / (allIssues.length || 1)) * 100)}% map coverage` : `${Math.round((stats.geoTaggedCount / (allIssues.length || 1)) * 100)}% मानचित्र कवरेज`} 
+          color="warning"
+          mapHref={ROUTES.CIVIC_MAP}
+        />
+        <StatCard 
+          value={stats.issuesThisWeek.toString()} 
+          label={language === "en" ? "Issues This Week" : "इस सप्ताह के मुद्दे"}
+          trend={language === "en" ? "New reports (7d)" : "नई रिपोर्ट (7 दिन)"} 
+          color="primary"
         />
       </div>
 
+      {/* Analytics Section */}
+      <div className="mb-8">
+        <button
+          className="flex items-center gap-2 mb-4 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors group"
+          onClick={() => setShowAnalytics((v) => !v)}
+        >
+          <BarChart3 className="w-4.5 h-4.5 text-primary" />
+          {language === "en" ? "Civic Analytics" : "नागरिक विश्लेषण"}
+          {showAnalytics
+            ? <ChevronUp className="w-3.5 h-3.5 ml-1 group-hover:text-primary transition-colors" />
+            : <ChevronDown className="w-3.5 h-3.5 ml-1 group-hover:text-primary transition-colors" />}
+        </button>
+        {showAnalytics && <AnalyticsPanel issues={allIssues} />}
+      </div>
+
       {/* Issues Grid */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+          </span>
+          {language === "en" ? "Live Issues Feed" : "लाइव समस्या फ़ीड"}
+          <Badge variant="outline" className="text-[9px] bg-green-500/10 text-green-500 border-green-500/20 px-1.5 py-0 uppercase font-extrabold animate-pulse flex items-center gap-1 shrink-0">
+            ● {language === "en" ? "Live" : "लाइव"}
+          </Badge>
+        </h2>
+        <div className="flex items-center gap-2">
+          {isNearbyMode ? (
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 animate-bounce" />
+              {language === "en" ? "Showing issues near you" : "आपके पास की समस्याएं"}
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="text-muted-foreground bg-muted/40">
+              {language === "en" ? "Showing all issues" : "सभी समस्याएं दिखाई जा रही हैं"}
+            </Badge>
+          )}
+        </div>
+      </div>
       {loading ? (
         <LoadingState message={language === "en" ? "Loading issues..." : "समस्याएं लोड हो रही हैं..."} />
       ) : issues.length === 0 ? (
@@ -237,6 +312,7 @@ export default function DashboardPage() {
               isSupporting={supportingId === issue.id}
               onSupport={() => handleSupport(issue.id)}
               onViewDetails={() => handleViewDetails(issue.id)}
+              onViewOnMap={issue.latitude && issue.longitude ? () => handleViewOnMap(issue.id) : undefined}
               getTimeAgo={getTimeAgo}
               activeLanguage={language}
             />
@@ -348,7 +424,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Description */}
-                <div className="mb-6">
+                <div className="mb-4">
                   <h4 className="text-sm font-bold text-foreground mb-2">
                     {language === "en" ? "Description" : "विवरण"}
                   </h4>
@@ -357,12 +433,27 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
+                {/* AI Intelligence Panel — only for authenticated users */}
+                {user && <AIInsightPanel issue={selectedIssue} />}
+
                 {/* Footer / Actions */}
-                <div className="flex items-center justify-between pt-4 border-t border-border">
+                <div className="flex items-center justify-between pt-4 border-t border-border mt-5">
                   <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">{selectedIssue.supportsCount}</span> {language === "en" ? "supports" : "समर्थन"}
+                    <span className="font-semibold text-foreground">{selectedIssue.supportsCount}</span>{" "}
+                    {language === "en" ? "supports" : "समर्थन"}
                   </div>
                   <div className="flex items-center gap-2">
+                    {selectedIssue.latitude && selectedIssue.longitude && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5 text-xs"
+                        onClick={() => handleViewOnMap(selectedIssue.id)}
+                      >
+                        <Map className="w-3.5 h-3.5" />
+                        {language === "en" ? "View on Map" : "मानचित्र"}
+                      </Button>
+                    )}
                     <Button 
                       variant={supportedIssues.has(selectedIssue.id) ? "default" : "outline"} 
                       size="sm" 
@@ -402,16 +493,18 @@ export default function DashboardPage() {
 
 function StatCard({ 
   value, 
-  labelKey, 
+  label, 
   trend, 
-  color 
+  color,
+  mapHref,
 }: { 
   value: string; 
-  labelKey: string; 
+  label: string; 
   trend: string; 
   color: "primary" | "accent" | "warning" | "info";
+  mapHref?: string;
 }) {
-  const { t } = useLanguage();
+  const navigate = useNavigate();
   const colorClasses = {
     primary: "bg-primary/10 text-primary",
     accent: "bg-accent/10 text-accent",
@@ -420,10 +513,18 @@ function StatCard({
   };
 
   return (
-    <div className="bg-card rounded-2xl p-5 border border-border shadow-card">
+    <div
+      className={`bg-card rounded-2xl p-5 border border-border shadow-card relative group ${
+        mapHref ? "cursor-pointer hover:border-primary/40 hover:-translate-y-0.5 transition-all" : ""
+      }`}
+      onClick={mapHref ? () => navigate(mapHref) : undefined}
+    >
       <p className={`text-3xl font-bold mb-1 ${colorClasses[color].split(" ")[1]}`}>{value}</p>
-      <p className="text-sm font-medium text-foreground mb-1">{t(labelKey)}</p>
+      <p className="text-sm font-medium text-foreground mb-1">{label}</p>
       <p className="text-xs text-muted-foreground">{trend}</p>
+      {mapHref && (
+        <Map className="absolute top-3 right-3 w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+      )}
     </div>
   );
 }
@@ -435,6 +536,7 @@ function IssueCard({
   isSupporting,
   onSupport,
   onViewDetails,
+  onViewOnMap,
   getTimeAgo,
   activeLanguage,
 }: { 
@@ -444,6 +546,7 @@ function IssueCard({
   isSupporting: boolean;
   onSupport: () => void;
   onViewDetails: () => void;
+  onViewOnMap?: () => void;
   getTimeAgo: (date: Date) => string;
   activeLanguage: "en" | "hi";
 }) {
@@ -490,11 +593,21 @@ function IssueCard({
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
               {getTimeAgo(issue.createdAt)}
             </span>
+            {onViewOnMap && (
+              <button
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => { e.stopPropagation(); onViewOnMap(); }}
+                title={activeLanguage === "en" ? "View on Map" : "मानचित्र पर देखें"}
+              >
+                <Map className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{activeLanguage === "en" ? "Map" : "मानचित्र"}</span>
+              </button>
+            )}
           </div>
           <Button 
             variant={isSupported ? "default" : "ghost"} 

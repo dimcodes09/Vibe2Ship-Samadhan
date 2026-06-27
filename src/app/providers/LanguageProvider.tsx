@@ -14,6 +14,7 @@ export const translations: Translations = {
   // Header
   "nav.dashboard": { en: "Dashboard", hi: "डैशबोर्ड" },
   "nav.report": { en: "Report Issue", hi: "समस्या दर्ज करें" },
+  "nav.map": { en: "Civic Map", hi: "नागरिक मानचित्र" },
   "nav.schemes": { en: "Schemes", hi: "योजनाएं" },
   "nav.analyzer": { en: "Form Analyzer", hi: "फॉर्म विश्लेषक" },
   "nav.documents": { en: "Documents", hi: "दस्तावेज़" },

@@ -17,6 +17,16 @@ export const issueRepository = {
     return data as IssueResponse[];
   },
 
+  async fetchAllIssuesForMap(): Promise<IssueResponse[]> {
+    const { data, error } = await supabase
+      .from("reported_issues")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw new APIError(error.message, undefined, error);
+    return data as IssueResponse[];
+  },
+
   async fetchIssueById(issueId: string): Promise<IssueResponse> {
     const { data, error } = await supabase
       .from("reported_issues")

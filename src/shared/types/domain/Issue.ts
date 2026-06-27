@@ -15,4 +15,5 @@ export interface Issue {
   latitude?: number | null;
   longitude?: number | null;
   createdAt: Date;
+  updatedAt?: Date;
 }
