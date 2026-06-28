@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { User } from "@supabase/supabase-js";
 import { useNavigate } from "react-router-dom";
+import { gamificationService } from "../../profile/services/gamificationService";
 import { useToast } from "@/shared/hooks/use-toast";
 import { reportIssueSchema } from "../validation/reportIssueSchema";
 import { issueService } from "../services/issueService";
@@ -239,6 +240,8 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
         imageFile,
         activeLanguage
       );
+
+      gamificationService.dispatchGamificationUpdate();
 
       toast({
         title: activeLanguage === "en" ? "Issue Reported!" : "समस्या दर्ज!",

@@ -1,6 +1,8 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { useLanguage } from "@/app/providers/LanguageProvider";
+import { useAuth } from "@/features/auth";
 import { ROUTES } from "@/shared/config/routes";
 import { 
   MapPin, 
@@ -9,8 +11,31 @@ import {
   ArrowRight,
   CheckCircle2,
   Users,
-  Clock
+  Clock,
+  Trophy,
+  Flame,
+  FolderLock,
+  Award,
+  Compass,
+  ShieldAlert,
+  BadgeCheck
 } from "lucide-react";
+import { issueRepository, issueService } from "@/features/issues";
+import { profileService } from "@/features/profile/services/profileService";
+import { gamificationService } from "@/features/profile/services/gamificationService";
+import { documentRepository } from "@/features/documents/repositories/documentRepository";
+import { schemeRepository } from "@/features/schemes/repositories/schemeRepository";
+import { Issue } from "@/shared/types/domain/Issue";
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Award,
+  Sparkles: Trophy,
+  Flame,
+  User: Trophy,
+  Compass,
+  ShieldAlert,
+  BadgeCheck,
+};
 
 export function HeroSection() {
   const { t } = useLanguage();

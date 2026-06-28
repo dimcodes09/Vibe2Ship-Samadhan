@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { notificationService, AppNotification } from "@/shared/services/notificationService";
+import { CommunityHeroWidget } from "@/features/profile/components/CommunityHeroWidget";
 
 interface NavItem {
   labelKey: string;
@@ -186,46 +187,7 @@ export const Header = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>
                 <Loader2 className="w-4 h-4 animate-spin" />
               </Button>
             ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="iconSm" className="relative">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                      <User className="w-4 h-4" />
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to={ROUTES.PROFILE} className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      {language === "en" ? "My Profile" : "मेरी प्रोफ़ाइल"}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to={`${ROUTES.PROFILE}?tab=issues`} className="flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      {language === "en" ? "My Issues" : "मेरी समस्याएं"}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to={`${ROUTES.PROFILE}?tab=notifications`} className="flex items-center gap-2">
-                      <Bell className="w-4 h-4" />
-                      {language === "en" ? "Notifications" : "अधिसूचनाएं"}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
-                    <LogOut className="w-4 h-4 mr-2" />
-                    {language === "en" ? "Sign Out" : "साइन आउट"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <CommunityHeroWidget />
             ) : (
               <Link to={ROUTES.SIGN_IN}>
                 <Button variant="outline" size="sm" className="hidden sm:flex gap-2">

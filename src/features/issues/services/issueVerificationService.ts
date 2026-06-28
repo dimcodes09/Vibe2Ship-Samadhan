@@ -1,3 +1,5 @@
+import { gamificationService } from "../../profile/services/gamificationService";
+
 export interface VerificationRecord {
   issueId: string;
   confirmations: number;
@@ -122,6 +124,7 @@ class IssueVerificationService {
     window.dispatchEvent(
       new CustomEvent("issue_verifications_changed", { detail: { issueId } })
     );
+    gamificationService.dispatchGamificationUpdate();
 
     return current;
   }
