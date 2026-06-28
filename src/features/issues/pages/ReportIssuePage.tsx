@@ -172,10 +172,10 @@ export default function ReportIssuePage() {
           {/* Photo Upload + Detection */}
           <div className="space-y-2">
             <Label>
-              {language === "en" ? "Add Photo (AI Detection)" : "फोटो जोड़ें (AI पहचान)"}
+              {language === "en" ? "Add Photo or Video (AI Detection)" : "फोटो या वीडियो जोड़ें (AI पहचान)"}
             </Label>
             <label className="block border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+              <input type="file" accept="image/*,video/*" className="hidden" onChange={handleImageChange} />
               {imagePreview ? (
                 <img src={annotatedImage || imagePreview} alt="preview" className="max-h-64 mx-auto rounded-lg" />
               ) : (
@@ -184,16 +184,25 @@ export default function ReportIssuePage() {
                     <Camera className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground mb-1">
-                    {language === "en" ? "Upload to auto-detect issue" : "स्वतः पहचान के लिए अपलोड करें"}
+                    {language === "en" 
+                      ? "Upload image or video for AI detection" 
+                      : "AI पहचान के लिए छवि या वीडियो अपलोड करें"}
                   </p>
-                  <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    PNG • JPG • MP4 • MOV • WEBM
+                  </p>
+                  <p className="text-[10px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                    {language === "en"
+                      ? "Videos are analyzed by extracting a representative frame. Videos are never stored."
+                      : "एक प्रतिनिधि फ्रेम निकालकर वीडियो का विश्लेषण किया जाता है। वीडियो कभी भी संग्रहीत नहीं किए जाते हैं।"}
+                  </p>
                 </>
               )}
             </label>
             {detecting && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                {language === "en" ? "Analyzing image..." : "छवि विश्लेषण हो रहा है..."}
+                {language === "en" ? "Analyzing upload..." : "अपलोड का विश्लेषण हो रहा है..."}
               </div>
             )}
             {detectedClasses.length > 0 && (

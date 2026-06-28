@@ -71,4 +71,21 @@ describe("useReportIssue Hook state management & submission", () => {
       "en"
     );
   });
+
+  it("rejects files larger than 10MB in handleImageChange", async () => {
+    const { result } = renderHook(() => useReportIssue(mockUser, "en"));
+    const largeFile = new File(["a".repeat(11 * 1024 * 1024)], "too_large.jpg", { type: "image/jpeg" });
+    
+    const event = {
+      target: {
+        files: [largeFile],
+      },
+    } as any;
+
+    await act(async () => {
+      await result.current.handleImageChange(event);
+    });
+
+    expect(result.current.imagePreview).toBeNull();
+  });
 });

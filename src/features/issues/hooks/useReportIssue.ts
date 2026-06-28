@@ -19,6 +19,65 @@ const detectionToCategory = (cls: string): string | null => {
   return null;
 };
 
+const extractFrameFromVideo = async (file: File, seekTimeSeconds: number = 1.5): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.preload = "auto";
+    video.muted = true;
+    video.playsInline = true;
+
+    const objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+
+    video.onloadedmetadata = () => {
+      const targetTime = Math.min(seekTimeSeconds, video.duration);
+      video.currentTime = targetTime;
+    };
+
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get 2D canvas context"));
+          return;
+        }
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error("Failed to export canvas to Blob"));
+            return;
+          }
+          const frameFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + "_frame.jpg", {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(frameFile);
+          URL.revokeObjectURL(objectUrl);
+          // Free video element resources
+          video.src = "";
+          video.load();
+        }, "image/jpeg", 0.9);
+      } catch (err) {
+        reject(err);
+        URL.revokeObjectURL(objectUrl);
+        video.src = "";
+        video.load();
+      }
+    };
+
+    video.onerror = () => {
+      reject(new Error("Error loading video: " + (video.error?.message || "Unknown error")));
+      URL.revokeObjectURL(objectUrl);
+      video.src = "";
+      video.load();
+    };
+  });
+};
+
 export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,42 +108,67 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. File size verification (5MB)
-    const MAX_SIZE = 5 * 1024 * 1024;
+    // 1. File size verification (10MB)
+    const MAX_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       toast({
         title: activeLanguage === "en" ? "File too large" : "फ़ाइल बहुत बड़ी है",
-        description: activeLanguage === "en" ? "Max file size is 5MB" : "अधिकतम फ़ाइल आकार 5MB है",
+        description: activeLanguage === "en" ? "Max file size is 10MB" : "अधिकतम फ़ाइल आकार 10MB है",
         variant: "destructive",
       });
       return;
     }
 
-    // 2. MIME type verification
-    const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-    if (!ALLOWED_MIMES.includes(file.type)) {
-      toast({
-        title: activeLanguage === "en" ? "Unsupported file type" : "असमर्थित फ़ाइल प्रकार",
-        description: activeLanguage === "en" ? "Only JPG, PNG, WEBP, and GIF images are allowed" : "केवल JPG, PNG, WEBP और GIF छवियों की अनुमति है",
-        variant: "destructive",
-      });
-      return;
+    // 2. MIME type & extension checks
+    const ALLOWED_IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const ALLOWED_VIDEO_MIMES = ["video/mp4", "video/quicktime", "video/webm"];
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const isVideo = ALLOWED_VIDEO_MIMES.includes(file.type) || ["mp4", "mov", "webm"].includes(extension || "");
+
+    let processedFile = file;
+
+    if (isVideo) {
+      setDetecting(true);
+      try {
+        processedFile = await extractFrameFromVideo(file);
+      } catch (err: any) {
+        logger.error("Video frame extraction failed:", err);
+        toast({
+          title: activeLanguage === "en" ? "Video analysis failed" : "वीडियो विश्लेषण विफल",
+          description: activeLanguage === "en" ? "Could not extract a frame from this video." : "इस वीडियो से फ्रेम नहीं निकाला जा सका।",
+          variant: "destructive",
+        });
+        setDetecting(false);
+        return;
+      }
+    } else {
+      // MIME type verification
+      if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
+        toast({
+          title: activeLanguage === "en" ? "Unsupported file type" : "असमर्थित फ़ाइल प्रकार",
+          description: activeLanguage === "en" 
+            ? "Only JPG, PNG, WEBP, GIF, MP4, MOV, and WEBM files are allowed" 
+            : "केवल JPG, PNG, WEBP, GIF, MP4, MOV, और WEBM फाइलों की अनुमति है",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Magic Byte signature check
+      const isValidSignature = await validateFileSignature(file, ALLOWED_IMAGE_MIMES);
+      if (!isValidSignature) {
+        toast({
+          title: activeLanguage === "en" ? "Invalid Image File" : "अवैध छवि फ़ाइल",
+          description: activeLanguage === "en" 
+            ? "File header does not match its extension. Upload rejected for security reasons." 
+            : "फ़ाइल हेडर इसके एक्सटेंशन से मेल नहीं खाता है। सुरक्षा कारणों से अपलोड अस्वीकार कर दिया गया।",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
-    // 3. Magic Byte signature check
-    const isValidSignature = await validateFileSignature(file, ALLOWED_MIMES);
-    if (!isValidSignature) {
-      toast({
-        title: activeLanguage === "en" ? "Invalid Image File" : "अवैध छवि फ़ाइल",
-        description: activeLanguage === "en" 
-          ? "File header does not match its extension. Upload rejected for security reasons." 
-          : "फ़ाइल हेडर इसके एक्सटेंशन से मेल नहीं खाता है। सुरक्षा कारणों से अपलोड अस्वीकार कर दिया गया।",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setImageFile(file);
+    setImageFile(processedFile);
     setAnnotatedImage(null);
     setDetectedClasses([]);
 
@@ -98,7 +182,7 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
       try {
         const result = await visionService.analyseImage({
           base64Image: base64,
-          mimeType: file.type as any,
+          mimeType: processedFile.type as any,
         });
         if (result.classes.length) {
           setDetectedClasses(result.classes);
@@ -130,7 +214,7 @@ export function useReportIssue(user: User | null, activeLanguage: "en" | "hi") {
         setDetecting(false);
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   };
 
   /**

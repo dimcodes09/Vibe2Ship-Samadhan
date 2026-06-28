@@ -62,10 +62,11 @@ export function CommunityHeroWidget() {
       const rawSupported = await issueRepository.fetchUserSupportedIssues(user.id);
       setSupportedIssues(rawSupported.map((item) => issueService.mapResponseToDomain(item)));
 
-      const prof = await profileService.getProfile(user.id);
-      setUserProfile(prof);
-
       setStatsLoaded(true);
+
+      profileService.getProfile(user.id)
+        .then((prof) => setUserProfile(prof))
+        .catch(() => {});
     } catch {}
   };
 
@@ -188,8 +189,9 @@ export function CommunityHeroWidget() {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Trigger Button */}
-      <button
+      {/* Trigger Link */}
+      <Link
+        to={ROUTES.PROFILE}
         onClick={handleTriggerClick}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-500 relative select-none ${
           shouldPulse
@@ -210,7 +212,7 @@ export function CommunityHeroWidget() {
         <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center overflow-hidden">
           <User className="w-3.5 h-3.5" />
         </div>
-      </button>
+      </Link>
 
       {/* Hover Card / Popover */}
       {showCard && (

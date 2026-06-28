@@ -29,38 +29,41 @@ export function useProfileData(user: User | null, activeLanguage: "en" | "hi") {
     if (!user) return;
     setLoading(true);
     
-    // Fetch Profile
     try {
-      const prof = await profileService.getProfile(user.id);
-      setProfile(prof);
-    } catch (err) {
-      logger.error("Failed to fetch profile:", err);
-    }
+      const [profResult, issuesResult, supportedResult, notifsResult] = await Promise.allSettled([
+        profileService.getProfile(user.id),
+        issueRepository.fetchUserIssues(user.id),
+        issueRepository.fetchUserSupportedIssues(user.id),
+        profileService.getNotificationPreferences(user.id)
+      ]);
 
-    // Fetch user reported issues
-    try {
-      const rawIssues = await issueRepository.fetchUserIssues(user.id);
-      const mappedIssues = rawIssues.map((item) => issueService.mapResponseToDomain(item));
-      setIssues(mappedIssues);
-    } catch (err) {
-      logger.error("Failed to fetch user issues:", err);
-    }
+      if (profResult.status === "fulfilled") {
+        setProfile(profResult.value);
+      } else {
+        logger.error("Failed to fetch profile:", profResult.reason);
+      }
 
-    // Fetch user supported issues
-    try {
-      const rawSupported = await issueRepository.fetchUserSupportedIssues(user.id);
-      const mappedSupported = rawSupported.map((item) => issueService.mapResponseToDomain(item));
-      setSupportedIssues(mappedSupported);
-    } catch (err) {
-      logger.error("Failed to fetch supported issues:", err);
-    }
+      if (issuesResult.status === "fulfilled") {
+        const mappedIssues = issuesResult.value.map((item) => issueService.mapResponseToDomain(item));
+        setIssues(mappedIssues);
+      } else {
+        logger.error("Failed to fetch user issues:", issuesResult.reason);
+      }
 
-    // Fetch notifications
-    try {
-      const notifs = await profileService.getNotificationPreferences(user.id);
-      setNotifications(notifs);
+      if (supportedResult.status === "fulfilled") {
+        const mappedSupported = supportedResult.value.map((item) => issueService.mapResponseToDomain(item));
+        setSupportedIssues(mappedSupported);
+      } else {
+        logger.error("Failed to fetch supported issues:", supportedResult.reason);
+      }
+
+      if (notifsResult.status === "fulfilled") {
+        setNotifications(notifsResult.value);
+      } else {
+        logger.error("Failed to fetch notification preferences:", notifsResult.reason);
+      }
     } catch (err) {
-      logger.error("Failed to fetch notification preferences:", err);
+      logger.error("Failed to fetch profile data in parallel:", err);
     }
 
     setLoading(false);
