@@ -70,7 +70,8 @@ describe("useDocuments Hook", () => {
     vi.mocked(documentService.uploadAndAnalyze).mockImplementation(
       async (userId, file, onProgress) => {
         onProgress("uploading");
-        onProgress("analyzing");
+        onProgress("reading");
+        onProgress("extracting");
         onProgress("saving");
         onProgress("complete");
         return {} as any;

@@ -15,4 +15,5 @@ export interface Scheme {
   isEligible: boolean;
   trustScore: number;
   icon?: React.ReactNode;
+  requiredDocuments?: string[]; // E.g. ["aadhaar", "pan", "income", "property"]
 }

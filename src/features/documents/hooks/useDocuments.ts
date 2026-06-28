@@ -6,6 +6,8 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/shared/services/logger";
 
+import { generateDocumentNotifications } from "../services/documentNotificationGenerator";
+
 export function useDocuments() {
   const { user } = useAuth();
   const [lockerDetails, setLockerDetails] = useState<DocumentLockerDetails | null>(null);
@@ -21,7 +23,7 @@ export function useDocuments() {
       setLockerDetails(data);
       setError(null);
     } catch (err: any) {
-      logger.error("Failed to load documents locker details:", err);
+      logger.error("Failed to load locker details:", err);
       setError(err.message || "Failed to load locker documents");
     } finally {
       setLoading(false);
@@ -60,21 +62,43 @@ export function useDocuments() {
     };
   }, [user?.id, fetchLockerDetails]);
 
+  // Trigger notification generation when locker details change
+  useEffect(() => {
+    if (lockerDetails) {
+      generateDocumentNotifications(lockerDetails.documents);
+    }
+  }, [lockerDetails]);
+
   // Simulated upload progress percent for UI feedback
   useEffect(() => {
     let interval: any;
     if (uploadStep === "uploading") {
-      setUploadProgress(15);
+      setUploadProgress(10);
       interval = setInterval(() => {
-        setUploadProgress((p) => Math.min(p + 5, 45));
-      }, 300);
-    } else if (uploadStep === "analyzing") {
+        setUploadProgress((p) => Math.min(p + 3, 28));
+      }, 150);
+    } else if (uploadStep === "reading") {
+      setUploadProgress(30);
+      interval = setInterval(() => {
+        setUploadProgress((p) => Math.min(p + 2, 48));
+      }, 200);
+    } else if (uploadStep === "extracting") {
       setUploadProgress(50);
       interval = setInterval(() => {
-        setUploadProgress((p) => Math.min(p + 2, 85));
-      }, 500);
+        setUploadProgress((p) => Math.min(p + 2, 68));
+      }, 250);
+    } else if (uploadStep === "checking") {
+      setUploadProgress(70);
+      interval = setInterval(() => {
+        setUploadProgress((p) => Math.min(p + 1, 82));
+      }, 100);
+    } else if (uploadStep === "summarizing") {
+      setUploadProgress(85);
+      interval = setInterval(() => {
+        setUploadProgress((p) => Math.min(p + 1, 93));
+      }, 150);
     } else if (uploadStep === "saving") {
-      setUploadProgress(90);
+      setUploadProgress(95);
       interval = setInterval(() => {
         setUploadProgress((p) => Math.min(p + 1, 98));
       }, 100);

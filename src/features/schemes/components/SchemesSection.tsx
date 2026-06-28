@@ -2,10 +2,8 @@
  * SchemesSection.tsx
  * ------------------
  * Renders government welfare schemes segmented into:
- *  ✅ "Eligible For You" — schemes the algorithm matched to the user profile
- *  📋 "All Schemes"     — remaining schemes for general browsing
- *
- * Task 4.2 — Schemes UI Integration (ImplementationPlan.md)
+ *  Eligible For You — schemes the algorithm matched to the user profile
+ *  All Schemes     — remaining schemes for general browsing
  */
 
 import { useState, useEffect, useMemo } from "react";
@@ -21,6 +19,19 @@ import { Scheme } from "@/shared/types/domain/Scheme";
 import { LoadingState } from "@/shared/components/LoadingState";
 import { ErrorState } from "@/shared/components/ErrorState";
 import { EmptyState } from "@/shared/components/EmptyState";
+import { useDocuments } from "@/features/documents/hooks/useDocuments";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/shared/config/routes";
+import { 
+  schemeAttachmentService, 
+  SchemeAttachment 
+} from "../services/schemeAttachmentService";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 import {
   Shield,
   CheckCircle2,
@@ -29,6 +40,12 @@ import {
   Sparkles,
   AlertCircle,
   ListFilter,
+  FolderLock,
+  ChevronDown,
+  ChevronUp,
+  Link2,
+  FileCheck,
+  FileX
 } from "lucide-react";
 
 interface EligibilityResult {
@@ -146,6 +163,21 @@ export function SchemesSection() {
   const { user } = useAuth();
   const { profile } = useProfileData(user, language);
   const { schemes, eligibleSchemes, otherSchemes, loading, error } = useSchemes(user, profile);
+
+  // Hook into document locker reactively
+  const { lockerDetails } = useDocuments();
+
+  // Keep track of scheme attachments reactively using schemeAttachmentService observer events
+  const [attachments, setAttachments] = useState<SchemeAttachment[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setAttachments(schemeAttachmentService.getAttachments());
+      const sync = () => setAttachments(schemeAttachmentService.getAttachments());
+      window.addEventListener("scheme_attachments_changed", sync);
+      return () => window.removeEventListener("scheme_attachments_changed", sync);
+    }
+  }, []);
 
   const [activeTab, setActiveTab] = useState<"eligible" | "all">("eligible");
 
@@ -475,6 +507,8 @@ export function SchemesSection() {
                 isHighlighted={!hasCalculated && scheme.isEligible}
                 isCalculated={hasCalculated}
                 calculationResult={calculatedResults[scheme.id]}
+                lockerDocuments={lockerDetails?.documents || []}
+                activeAttachments={attachments}
               />
             ))}
           </div>
@@ -514,14 +548,20 @@ function SchemeCard({
   isHighlighted,
   isCalculated,
   calculationResult,
+  lockerDocuments,
+  activeAttachments,
 }: {
   scheme: Scheme;
   index: number;
   isHighlighted?: boolean;
   isCalculated?: boolean;
   calculationResult?: { isEligible: boolean; reasons: string[] };
+  lockerDocuments: any[];
+  activeAttachments: SchemeAttachment[];
 }) {
   const { t, language } = useLanguage();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
 
   const title = language === "en" ? scheme.titleEn : scheme.titleHi;
   const description = language === "en" ? scheme.descriptionEn : scheme.descriptionHi;
@@ -530,6 +570,81 @@ function SchemeCard({
   const deadline = language === "en" ? scheme.deadlineEn : scheme.deadlineHi;
 
   const showEligible = isCalculated ? calculationResult?.isEligible : isHighlighted;
+
+  // 1. Calculate Document Readiness Progress & Status
+  const documentMetrics = useMemo(() => {
+    const required = scheme.requiredDocuments || [];
+    if (required.length === 0) return null;
+
+    const uploadedTypes = new Set(
+      lockerDocuments.map((d) => d.document_type?.toLowerCase() || "")
+    );
+
+    const available = required.filter((r) => uploadedTypes.has(r.toLowerCase()));
+    const missing = required.filter((r) => !uploadedTypes.has(r.toLowerCase()));
+    const percentage = Math.round((available.length / required.length) * 100);
+
+    // Readiness Status Classification
+    let statusText = "Not Started";
+    let statusColor = "bg-muted text-muted-foreground border-border";
+
+    if (percentage === 100) {
+      statusText = "Ready";
+      statusColor = "bg-accent/15 text-accent border-accent/35";
+    } else if (missing.length === 1 && required.length > 1) {
+      statusText = "Almost Ready";
+      statusColor = "bg-warning/15 text-warning border-warning/35";
+    } else if (available.length > 0) {
+      statusText = "Missing Documents";
+      statusColor = "bg-warning/15 text-warning border-warning/35";
+    }
+
+    if (language === "hi") {
+      if (statusText === "Ready") statusText = "तैयार";
+      if (statusText === "Almost Ready") statusText = "लगभग तैयार";
+      if (statusText === "Missing Documents") statusText = "दस्तावेज़ गायब";
+      if (statusText === "Not Started") statusText = "शुरू नहीं हुआ";
+    }
+
+    return { required, available, missing, percentage, statusText, statusColor };
+  }, [scheme.requiredDocuments, lockerDocuments, language]);
+
+  // Translate document type keys to human readable labels
+  const getDocTypeLabel = (type: string) => {
+    const lower = type.toLowerCase();
+    switch (lower) {
+      case "aadhaar":
+        return language === "en" ? "Aadhaar" : "आधार";
+      case "pan":
+        return language === "en" ? "PAN" : "पैन";
+      case "income":
+        return language === "en" ? "Income Certificate" : "आय प्रमाण पत्र";
+      case "property":
+        return language === "en" ? "Property Document" : "संपत्ति दस्तावेज़";
+      case "license":
+        return language === "en" ? "Driving Licence" : "ड्राइविंग लाइसेंस";
+      default:
+        return type;
+    }
+  };
+
+  const handleOpenLocker = () => {
+    navigate(ROUTES.DOCUMENTS);
+  };
+
+  const handleAttach = (docType: string, file: any) => {
+    schemeAttachmentService.attachFileToScheme(
+      scheme.id,
+      docType,
+      file.id,
+      file.file_path,
+      file.name
+    );
+  };
+
+  const handleDetach = (docType: string) => {
+    schemeAttachmentService.detachFileFromScheme(scheme.id, docType);
+  };
 
   return (
     <div
@@ -543,18 +658,33 @@ function SchemeCard({
       <div>
         {/* Eligible ribbon */}
         {showEligible ? (
-          <div className="bg-accent/10 border-b border-accent/20 px-4 py-1.5 flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
-            <span className="text-xs font-medium text-accent">
-              {language === "en" ? "Likely Eligible" : "संभवतः पात्र"}
-            </span>
+          <div className="bg-accent/10 border-b border-accent/20 px-4 py-1.5 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-accent" />
+              <span className="text-xs font-medium text-accent">
+                {language === "en" ? "Likely Eligible" : "संभवतः पात्र"}
+              </span>
+            </div>
+            {/* Dynamic Readiness Badge */}
+            {documentMetrics && (
+              <Badge variant="outline" className={`text-[10px] font-bold py-0 px-2 rounded-full border ${documentMetrics.statusColor}`}>
+                {documentMetrics.statusText}
+              </Badge>
+            )}
           </div>
         ) : isCalculated ? (
-          <div className="bg-destructive/5 border-b border-destructive/10 px-4 py-1.5 flex items-center gap-1.5">
-            <AlertCircle className="w-3.5 h-3.5 text-destructive" />
-            <span className="text-xs font-medium text-destructive">
-              {language === "en" ? "Not Eligible" : "पात्र नहीं"}
-            </span>
+          <div className="bg-destructive/5 border-b border-destructive/10 px-4 py-1.5 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5 text-destructive" />
+              <span className="text-xs font-medium text-destructive">
+                {language === "en" ? "Not Eligible" : "पात्र नहीं"}
+              </span>
+            </div>
+            {documentMetrics && (
+              <Badge variant="outline" className={`text-[10px] font-bold py-0 px-2 rounded-full border ${documentMetrics.statusColor}`}>
+                {documentMetrics.statusText}
+              </Badge>
+            )}
           </div>
         ) : null}
 
@@ -576,17 +706,18 @@ function SchemeCard({
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 px-2 py-1 bg-accent/10 rounded-full shrink-0">
+            {/* Renamed to Trust Score */}
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-accent/10 rounded-full shrink-0 border border-accent/20">
               <Shield className="w-3 h-3 text-accent" />
-              <span className="text-xs font-medium text-accent">{scheme.trustScore}%</span>
+              <span className="text-[10px] font-bold text-accent">Trust Score: {scheme.trustScore}%</span>
             </div>
           </div>
 
           {/* Content */}
-          <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+          <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors text-left">
             {title}
           </h3>
-          <p className="text-sm text-muted-foreground mb-4">{description}</p>
+          <p className="text-sm text-muted-foreground mb-4 text-left">{description}</p>
 
           {/* Eligibility Criteria */}
           <div className="flex flex-wrap gap-2 mb-4">
@@ -601,9 +732,32 @@ function SchemeCard({
             ))}
           </div>
 
+          {/* Document Readiness Progress Indicator */}
+          {documentMetrics && (
+            <div className="p-3 bg-muted/20 border border-border/40 rounded-xl text-left mb-4">
+              <div className="flex justify-between items-center mb-1 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span>{language === "en" ? "Document Readiness" : "दस्तावेज़ तत्परता"}</span>
+                <span className="text-primary">{documentMetrics.percentage}%</span>
+              </div>
+              <div className="w-full bg-muted h-2 rounded-full overflow-hidden flex">
+                <div 
+                  className="bg-primary h-full transition-all duration-500 rounded-full"
+                  style={{ width: `${documentMetrics.percentage}%` }}
+                />
+              </div>
+              {/* Helper info line below the readiness progress bar */}
+              <p className="text-[10px] text-muted-foreground mt-1.5 font-medium leading-none">
+                {language === "en"
+                  ? `${documentMetrics.available.length} of ${documentMetrics.required.length} required documents available`
+                  : `${documentMetrics.required.length} में से ${documentMetrics.available.length} आवश्यक दस्तावेज़ उपलब्ध हैं`
+                }
+              </p>
+            </div>
+          )}
+
           {/* Calculator Reasons */}
           {isCalculated && calculationResult && (
-            <div className={`mt-4 p-3 rounded-xl text-xs border ${
+            <div className={`mt-4 p-3 rounded-xl text-xs border text-left ${
               calculationResult.isEligible 
                 ? "bg-accent/5 border-accent/25 text-foreground" 
                 : "bg-destructive/5 border-destructive/25 text-muted-foreground"
@@ -616,6 +770,137 @@ function SchemeCard({
                   <li key={i}>{r}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Expandable Document Checklist Details */}
+          {isExpanded && documentMetrics && (
+            <div className="mt-4 pt-4 border-t border-border/50 text-left animate-fade-in space-y-4">
+              <div>
+                <h4 className="text-xs uppercase font-extrabold text-muted-foreground mb-2.5 flex items-center gap-1">
+                  <FolderLock className="w-3.5 h-3.5 text-primary" />
+                  {language === "en" ? "Required Documents" : "आवश्यक दस्तावेज़"}
+                </h4>
+                
+                <div className="space-y-2">
+                  {documentMetrics.required.map((docType) => {
+                    const availableFiles = lockerDocuments.filter(
+                      (d) => d.document_type?.toLowerCase() === docType.toLowerCase()
+                    );
+                    const isAvailable = availableFiles.length > 0;
+                    
+                    // Check if there is an active attachment
+                    const attachment = activeAttachments.find(
+                      (a) => a.schemeId === scheme.id && a.documentType.toLowerCase() === docType.toLowerCase()
+                    );
+
+                    return (
+                      <div 
+                        key={docType} 
+                        className="flex items-center justify-between p-2.5 bg-muted/40 border border-border/30 rounded-lg text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isAvailable ? (
+                            <span className="text-accent font-bold shrink-0">✓</span>
+                          ) : (
+                            <span className="text-destructive font-bold shrink-0">✕</span>
+                          )}
+                          <div className="min-w-0">
+                            <span className="font-medium text-foreground">
+                              {getDocTypeLabel(docType)} {isAvailable ? `(${language === "en" ? "Available" : "उपलब्ध"})` : `(${language === "en" ? "Missing" : "गायब"})`}
+                            </span>
+                            {attachment && (
+                              <span className="text-[10px] text-accent font-semibold truncate block mt-0.5 max-w-[150px]">
+                                Attached: {attachment.fileName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Attach/Upload Action Button */}
+                        <div className="shrink-0 ml-3">
+                          {attachment ? (
+                            <Button 
+                              variant="ghost" 
+                              size="xs" 
+                              onClick={() => handleDetach(docType)}
+                              className="text-destructive hover:bg-destructive/10 text-[10px] h-7 px-2 font-bold"
+                            >
+                              Detach
+                            </Button>
+                          ) : isAvailable ? (
+                            availableFiles.length === 1 ? (
+                              <Button 
+                                variant="outline" 
+                                size="xs" 
+                                onClick={() => handleAttach(docType, availableFiles[0])}
+                                className="text-primary hover:bg-primary/10 text-[10px] h-7 px-2 border-primary/20 flex items-center gap-1 font-bold"
+                              >
+                                <Link2 className="w-3 h-3" />
+                                Attach from Locker
+                              </Button>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="xs" 
+                                    className="text-primary hover:bg-primary/10 text-[10px] h-7 px-2 border-primary/20 flex items-center gap-1 font-bold"
+                                  >
+                                    <Link2 className="w-3 h-3" />
+                                    Attach from Locker...
+                                    <ChevronDown className="w-2.5 h-2.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                  {availableFiles.map((file) => (
+                                    <DropdownMenuItem 
+                                      key={file.id} 
+                                      onClick={() => handleAttach(docType, file)}
+                                      className="text-xs truncate cursor-pointer"
+                                    >
+                                      {file.name}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="xs" 
+                              onClick={handleOpenLocker}
+                              className="text-muted-foreground hover:bg-muted text-[10px] h-7 px-2 border-border"
+                            >
+                              Open Document Locker
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status Readiness Warning */}
+              <div className="flex items-center justify-between p-3.5 bg-muted/40 border border-border/40 rounded-xl text-xs gap-3">
+                <p className="text-muted-foreground font-medium flex-1">
+                  {documentMetrics.percentage === 100
+                    ? (language === "en" ? "Your required documents are ready." : "आपके आवश्यक दस्तावेज़ तैयार हैं।")
+                    : (language === "en" ? "Upload the missing documents to improve application readiness." : "आवेदन तत्परता में सुधार के लिए गायब दस्तावेज़ों को अपलोड करें।")
+                  }
+                </p>
+                {documentMetrics.percentage < 100 && (
+                  <Button 
+                    variant="outline" 
+                    size="xs" 
+                    onClick={handleOpenLocker}
+                    className="shrink-0 gap-1 text-[11px] font-bold"
+                  >
+                    Open Document Locker
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -634,9 +919,23 @@ function SchemeCard({
               {language === "en" ? "Not Eligible" : "पात्र नहीं"}
             </span>
           )}
-          <Button variant="ghost" size="sm" className="gap-1">
-            {t("schemes.learnMore")}
-            <ArrowRight className="w-4 h-4" />
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="gap-1 font-bold text-xs" 
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <>
+                Hide Details
+                <ChevronUp className="w-4 h-4" />
+              </>
+            ) : (
+              <>
+                {t("schemes.learnMore")}
+                <ChevronDown className="w-4 h-4" />
+              </>
+            )}
           </Button>
         </div>
       </div>

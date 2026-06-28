@@ -22,4 +22,12 @@ export interface UserDocument {
   updated_at: string;
 }
 
-export type UploadProgressStep = 'idle' | 'uploading' | 'analyzing' | 'saving' | 'complete';
+export type UploadProgressStep = 
+  | 'idle' 
+  | 'uploading' 
+  | 'reading' 
+  | 'extracting' 
+  | 'checking' 
+  | 'summarizing' 
+  | 'saving' 
+  | 'complete';

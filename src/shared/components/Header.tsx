@@ -1,4 +1,4 @@
-import React, { useState, forwardRef } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { useLanguage } from "@/app/providers/LanguageProvider";
@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
+import { notificationService, AppNotification } from "@/shared/services/notificationService";
 
 interface NavItem {
   labelKey: string;
@@ -50,6 +51,16 @@ export const Header = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>
   const { language, setLanguage, t } = useLanguage();
   const { user, loading, signOut } = useAuth();
   const location = useLocation();
+
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribe((list) => {
+      setNotifications(list);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const toggleLanguage = () => {
     setLanguage(language === "en" ? "hi" : "en");
@@ -113,13 +124,61 @@ export const Header = forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>
               </span>
             </Button>
 
-            {/* Notifications */}
-            <Button variant="ghost" size="iconSm" className="relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
-                3
-              </span>
-            </Button>
+            {/* Notifications Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="iconSm" className="relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-secondary text-secondary-foreground text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
+                <div className="px-3 py-2 font-semibold text-sm border-b border-border flex justify-between items-center">
+                  <span>{language === "en" ? "Notifications" : "अधिसूचनाएं"}</span>
+                  {unreadCount > 0 && (
+                    <button 
+                      onClick={() => notificationService.markAllAsRead()} 
+                      className="text-xs text-primary hover:underline font-normal"
+                    >
+                      {language === "en" ? "Mark all read" : "सभी पढ़े हुए मानें"}
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-muted-foreground">
+                    {language === "en" ? "No new alerts" : "कोई नई सूचनाएं नहीं"}
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <DropdownMenuItem 
+                      key={n.id} 
+                      onClick={() => notificationService.markAsRead(n.id)}
+                      className={`flex flex-col items-start p-3 gap-1 border-b border-border last:border-b-0 cursor-pointer ${
+                        !n.read ? "bg-muted/40 font-medium" : ""
+                      }`}
+                    >
+                      <div className="flex justify-between w-full text-xs">
+                        <span className={`font-bold ${
+                          n.type === 'error' ? 'text-destructive' :
+                          n.type === 'warning' ? 'text-warning' :
+                          'text-primary'
+                        }`}>
+                          {n.title}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-left leading-normal">{n.message}</p>
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User Menu or Sign In */}
             {loading ? (

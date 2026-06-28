@@ -27,6 +27,7 @@ const mockSchemes: Scheme[] = [
     isEligible: true,
     trustScore: 98,
     icon: React.createElement(Home, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "pan", "income", "property"],
   },
   {
     id: "2",
@@ -41,6 +42,7 @@ const mockSchemes: Scheme[] = [
     isEligible: true,
     trustScore: 100,
     icon: React.createElement(Heart, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "income"],
   },
   {
     id: "3",
@@ -57,6 +59,7 @@ const mockSchemes: Scheme[] = [
     isEligible: false,
     trustScore: 99,
     icon: React.createElement(Sprout, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "pan", "property"],
   },
   {
     id: "4",
@@ -71,6 +74,7 @@ const mockSchemes: Scheme[] = [
     isEligible: false,
     trustScore: 95,
     icon: React.createElement(Wrench, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "pan"],
   },
   {
     id: "5",
@@ -87,6 +91,7 @@ const mockSchemes: Scheme[] = [
     isEligible: true,
     trustScore: 100,
     icon: React.createElement(GraduationCap, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "income"],
   },
   {
     id: "6",
@@ -101,6 +106,7 @@ const mockSchemes: Scheme[] = [
     isEligible: false,
     trustScore: 97,
     icon: React.createElement(Coins, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "pan"],
   },
   {
     id: "7",
@@ -115,6 +121,7 @@ const mockSchemes: Scheme[] = [
     isEligible: true,
     trustScore: 99,
     icon: React.createElement(Banknote, { className: "w-5 h-5" }),
+    requiredDocuments: ["aadhaar", "pan", "income"],
   }
 ];
 

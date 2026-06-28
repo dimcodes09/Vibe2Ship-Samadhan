@@ -43,8 +43,8 @@ export const documentService = {
     onProgress: (step: UploadProgressStep) => void
   ): Promise<UserDocument> {
     try {
-      // 1. Analyze document first to verify validity (saves traffic/storage costs)
-      onProgress("analyzing");
+      // 1. VLM Text Reading & OCR Extraction
+      onProgress("reading");
       
       let fileBase64: string;
       let effectiveMimeType: string;
@@ -58,6 +58,7 @@ export const documentService = {
         effectiveMimeType = file.type;
       }
 
+      onProgress("extracting");
       const aiResult = await callAnalyzeDocumentEdgeFunction(fileBase64, effectiveMimeType, file.name);
 
       // Check validation gate
@@ -67,6 +68,12 @@ export const documentService = {
           "This image is not a recognized government document. Selfies, landscape photos, memes, or general non-govt files are not allowed."
         );
       }
+
+      // Check Expiry State
+      onProgress("checking");
+
+      // Summarize Details
+      onProgress("summarizing");
 
       // 2. Upload original file to Storage
       onProgress("uploading");
