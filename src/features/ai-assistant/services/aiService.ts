@@ -231,7 +231,7 @@ export async function analyzeFormDirect(
  * NVIDIA NIM vision models accept images (JPEG/PNG/WebP) but NOT raw PDFs.
  * We rasterise at 2x scale (144 DPI) for sharp, readable form text.
  */
-async function pdfFirstPageToJpeg(
+export async function pdfFirstPageToJpeg(
   file: File
 ): Promise<{ base64: string; mimeType: string }> {
   // Dynamic import keeps pdfjs out of the initial bundle
