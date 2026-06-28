@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { User } from "@supabase/supabase-js";
 import { issueRepository, issueService } from "@/features/issues";
+import { issueVerificationService } from "@/features/issues/services/issueVerificationService";
 import { dashboardService, DashboardStats } from "../services/dashboardService";
 import { Issue } from "@/shared/types/domain/Issue";
 import { useToast } from "@/shared/hooks/use-toast";
@@ -186,6 +187,9 @@ export function useDashboardIssues(
     try {
       await issueService.toggleSupport(issueId, user.id, isSupported);
       if (!isSupported) {
+        const title = allIssues.find((i) => i.id === issueId)?.title;
+        await issueVerificationService.voteOnIssue(issueId, "confirm", title);
+
         toast({
           title: activeLanguage === "en" ? "Issue Supported!" : "समस्या समर्थित!",
           description:

@@ -22,6 +22,8 @@ import {
 } from "@/shared/components/ui/dialog";
 import { profileService } from "@/features/profile/services/profileService";
 import { issueService } from "@/features/issues/services/issueService";
+import { issueVerificationService } from "@/features/issues/services/issueVerificationService";
+import { aiInsightService } from "@/features/issues/services/aiInsightService";
 import { useToast } from "@/shared/hooks/use-toast";
 import { logger } from "@/shared/services/logger";
 import { 
@@ -46,6 +48,8 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Shield,
+  X,
 } from "lucide-react";
 import { AnalyticsPanel } from "../components/AnalyticsPanel";
 import { AIInsightPanel } from "@/features/issues/components/AIInsightPanel";
@@ -95,6 +99,25 @@ export default function DashboardPage() {
   const [loadingSelected, setLoadingSelected] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [verificationVersion, setVerificationVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setVerificationVersion((v) => v + 1);
+    };
+    window.addEventListener("issue_verifications_changed", handleSync);
+    return () => window.removeEventListener("issue_verifications_changed", handleSync);
+  }, []);
+
+  const handleVote = async (issueId: string, vote: "confirm" | "disagree", title?: string) => {
+    await issueVerificationService.voteOnIssue(issueId, vote, title);
+    toast({
+      title: language === "en" ? "Vote Registered" : "मत दर्ज किया गया",
+      description: language === "en" 
+        ? "Thank you for contributing to community verification!" 
+        : "सामुदायिक सत्यापन में योगदान देने के लिए धन्यवाद!",
+    });
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined" && navigator.geolocation) {
@@ -339,104 +362,214 @@ export default function DashboardPage() {
               </p>
             </div>
           ) : (
-            <div className="flex flex-col">
-              {/* Header Image or Colored Banner */}
-              {selectedIssue.imageUrls && selectedIssue.imageUrls.length > 0 ? (
-                <div className="relative w-full h-56 bg-muted overflow-hidden">
-                  <img 
-                    src={selectedIssue.imageUrls[0]} 
-                    alt={selectedIssue.title}
-                    className="w-full h-full object-cover animate-fade-in"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
-                </div>
-              ) : (
-                <div className="w-full h-24 bg-gradient-to-r from-primary/10 to-accent/10 relative" />
-              )}
+            (() => {
+              const { confirmations, disagreements, confidence, isVerified, userVote } = 
+                issueVerificationService.getComputedState(selectedIssue.id, selectedIssue.title);
+              const insight = aiInsightService.getSyncInsight(selectedIssue);
+              const hasDepartment = !!insight?.department;
 
-              {/* Main Content Area */}
-              <div className="p-6">
-                <div className="flex flex-wrap items-center gap-2 mb-4">
-                  <Badge variant="secondary" className="text-xs">
-                    {selectedIssue.category}
-                  </Badge>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                    statusConfig[selectedIssue.status]?.class || statusConfig[IssueStatus.REPORTED].class
-                  }`}>
-                    {statusConfig[selectedIssue.status]?.icon || statusConfig[IssueStatus.REPORTED].icon}
-                    {STATUS_LABELS[selectedIssue.status]?.[language] || selectedIssue.status}
-                  </span>
-                </div>
+              const timelineSteps = [
+                { key: "reported", labelEn: "Reported", labelHi: "दर्ज की गई", complete: true },
+                { key: "ai_categorized", labelEn: "AI Categorized", labelHi: "एआई वर्गीकृत", complete: !!selectedIssue.category },
+                { key: "community_verified", labelEn: "Verified", labelHi: "सत्यापित", complete: isVerified },
+                { key: "department_assigned", labelEn: "Dept Assigned", labelHi: "विभाग", complete: hasDepartment || selectedIssue.status === IssueStatus.IN_PROGRESS || selectedIssue.status === IssueStatus.RESOLVED },
+                { key: "in_progress", labelEn: "In Progress", labelHi: "प्रगति में", complete: selectedIssue.status === IssueStatus.IN_PROGRESS || selectedIssue.status === IssueStatus.RESOLVED },
+                { key: "resolved", labelEn: "Resolved", labelHi: "सुलझाया गया", complete: selectedIssue.status === IssueStatus.RESOLVED },
+              ];
 
-                <DialogTitle className="text-2xl font-bold text-foreground mb-4">
-                  {selectedIssue.title}
-                </DialogTitle>
-
-                {/* Metadata Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-xl mb-6 border border-border/50">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <User className="w-4 h-4" />
+              return (
+                <div key={verificationVersion} className="flex flex-col">
+                  {/* Header Image or Colored Banner */}
+                  {selectedIssue.imageUrls && selectedIssue.imageUrls.length > 0 ? (
+                    <div className="relative w-full h-56 bg-muted overflow-hidden">
+                      <img 
+                        src={selectedIssue.imageUrls[0]} 
+                        alt={selectedIssue.title}
+                        className="w-full h-full object-cover animate-fade-in"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
                     </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        {language === "en" ? "Issued By" : "द्वारा जारी"}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">
-                        {selectedIssueProfile?.fullName || (language === "en" ? "Citizen" : "नागरिक")}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
-                      <Calendar className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                        {language === "en" ? "Reported On" : "रिपोर्ट की तिथि"}
-                      </p>
-                      <p className="text-sm font-semibold text-foreground">
-                        {new Date(selectedIssue.createdAt).toLocaleDateString(language === "en" ? "en-US" : "hi-IN", {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedIssue.location && (
-                    <div className="flex items-center gap-2.5 sm:col-span-2">
-                      <div className="w-9 h-9 rounded-lg bg-info/10 text-info flex items-center justify-center shrink-0">
-                        <MapPin className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
-                          {language === "en" ? "Location" : "स्थान"}
-                        </p>
-                        <p className="text-sm font-semibold text-foreground truncate">
-                          {selectedIssue.location}
-                        </p>
-                      </div>
-                    </div>
+                  ) : (
+                    <div className="w-full h-24 bg-gradient-to-r from-primary/10 to-accent/10 relative" />
                   )}
-                </div>
 
-                {/* Description */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-bold text-foreground mb-2">
-                    {language === "en" ? "Description" : "विवरण"}
-                  </h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed bg-muted/20 p-4 rounded-xl border border-border/30 whitespace-pre-wrap font-sans">
-                    {selectedIssue.description || (language === "en" ? "No description provided." : "कोई विवरण प्रदान नहीं किया गया।")}
-                  </p>
-                </div>
+                  {/* Main Content Area */}
+                  <div className="p-6">
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <Badge variant="secondary" className="text-xs">
+                        {selectedIssue.category}
+                      </Badge>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        statusConfig[selectedIssue.status]?.class || statusConfig[IssueStatus.REPORTED].class
+                      }`}>
+                        {statusConfig[selectedIssue.status]?.icon || statusConfig[IssueStatus.REPORTED].icon}
+                        {STATUS_LABELS[selectedIssue.status]?.[language] || selectedIssue.status}
+                      </span>
+                      {isVerified && (
+                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] font-bold py-0.5 px-2">
+                          ✓ {language === "en" ? "Community Verified" : "सामुदायिक सत्यापित"}
+                        </Badge>
+                      )}
+                    </div>
 
-                {/* AI Intelligence Panel — only for authenticated users */}
-                {user && <AIInsightPanel issue={selectedIssue} />}
+                    <DialogTitle className="text-2xl font-bold text-foreground mb-4">
+                      {selectedIssue.title}
+                    </DialogTitle>
 
-                {/* Footer / Actions */}
+                    {/* Metadata Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-muted/30 rounded-xl mb-6 border border-border/50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                            {language === "en" ? "Issued By" : "द्वारा जारी"}
+                          </p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {selectedIssueProfile?.fullName || (language === "en" ? "Citizen" : "नागरिक")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                            {language === "en" ? "Reported On" : "रिपोर्ट की तिथि"}
+                          </p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {new Date(selectedIssue.createdAt).toLocaleDateString(language === "en" ? "en-US" : "hi-IN", {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedIssue.location && (
+                        <div className="flex items-center gap-2.5 sm:col-span-2">
+                          <div className="w-9 h-9 rounded-lg bg-info/10 text-info flex items-center justify-center shrink-0">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                              {language === "en" ? "Location" : "स्थान"}
+                            </p>
+                            <p className="text-sm font-semibold text-foreground truncate">
+                              {selectedIssue.location}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Visual Lifecycle Timeline */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-bold text-foreground mb-3 flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-primary" />
+                        {language === "en" ? "Issue Lifecycle Timeline" : "समस्या जीवनचक्र समयरेखा"}
+                      </h4>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 bg-muted/20 border border-border/40 rounded-xl">
+                        {timelineSteps.map((step, idx) => (
+                          <div key={step.key} className="flex flex-col items-center text-center relative">
+                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold z-10 ${
+                              step.complete 
+                                ? "bg-green-500 text-white" 
+                                : "bg-muted text-muted-foreground border border-border"
+                            }`}>
+                              {step.complete ? "✓" : idx + 1}
+                            </div>
+                            <span className="text-[10px] font-semibold mt-1.5 text-foreground leading-tight line-clamp-2 px-0.5">
+                              {language === "en" ? step.labelEn : step.labelHi}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold text-foreground mb-2">
+                        {language === "en" ? "Description" : "विवरण"}
+                      </h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed bg-muted/20 p-4 rounded-xl border border-border/30 whitespace-pre-wrap font-sans">
+                        {selectedIssue.description || (language === "en" ? "No description provided." : "कोई विवरण प्रदान नहीं किया गया।")}
+                      </p>
+                    </div>
+
+                    {/* Community Verification Action Panel */}
+                    <div className="mb-6 p-4 rounded-xl border border-border/50 bg-muted/10">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-1.5">
+                          <Shield className="w-4 h-4 text-primary" />
+                          <h4 className="text-sm font-bold text-foreground">
+                            {language === "en" ? "Community Verification" : "सामुदायिक सत्यापन"}
+                          </h4>
+                        </div>
+                        {isVerified && (
+                          <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] font-bold">
+                            ✓ {language === "en" ? "Community Verified" : "सामुदायिक सत्यापित"}
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3 text-center mb-4">
+                        <div className="p-2 bg-muted/30 rounded-lg">
+                          <p className="text-xs text-muted-foreground">{language === "en" ? "Confirmations" : "पुष्टि"}</p>
+                          <p className="text-lg font-bold text-green-500">{confirmations}</p>
+                        </div>
+                        <div className="p-2 bg-muted/30 rounded-lg">
+                          <p className="text-xs text-muted-foreground">{language === "en" ? "Disagreements" : "असहमतियां"}</p>
+                          <p className="text-lg font-bold text-red-500">{disagreements}</p>
+                        </div>
+                        <div className="p-2 bg-muted/30 rounded-lg">
+                          <p className="text-xs text-muted-foreground">{language === "en" ? "Confidence" : "विश्वास"}</p>
+                          <p className="text-lg font-bold text-primary">{confidence}%</p>
+                        </div>
+                      </div>
+
+                      {/* Vote Action Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant={userVote === "confirm" ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1 gap-1.5 text-xs h-9 font-bold"
+                          onClick={() => handleVote(selectedIssue.id, "confirm", selectedIssue.title)}
+                          disabled={!!userVote}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {language === "en" ? "Confirm Issue" : "समस्या की पुष्टि करें"}
+                        </Button>
+                        <Button
+                          variant={userVote === "disagree" ? "destructive" : "outline"}
+                          size="sm"
+                          className="flex-1 gap-1.5 text-xs h-9 font-bold"
+                          onClick={() => handleVote(selectedIssue.id, "disagree", selectedIssue.title)}
+                          disabled={!!userVote}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          {language === "en" ? "Not an Issue" : "समस्या नहीं है"}
+                        </Button>
+                      </div>
+
+                      {userVote && (
+                        <p className="text-[10px] text-muted-foreground text-center mt-2.5 italic">
+                          {language === "en" 
+                            ? `You have already verified this issue as: ${userVote === "confirm" ? "Confirm Issue" : "Not an Issue"}.`
+                            : `आपने पहले ही इस समस्या को सत्यापित किया है: ${userVote === "confirm" ? "पुष्टि करें" : "समस्या नहीं है"}.`
+                          }
+                        </p>
+                      )}
+                    </div>
+
+                    {/* AI Intelligence Panel — only for authenticated users */}
+                    {user && <AIInsightPanel issue={selectedIssue} />}
+
+                    {/* Footer / Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-border mt-5">
                   <div className="text-sm text-muted-foreground">
                     <span className="font-semibold text-foreground">{selectedIssue.supportsCount}</span>{" "}
@@ -484,8 +617,10 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          )}
-        </DialogContent>
+          );
+        })()
+      )}
+    </DialogContent>
       </Dialog>
     </div>
   );
@@ -555,6 +690,23 @@ function IssueCard({
   const categoryIcon = categoryIcons[issue.category] || <AlertTriangle className="w-4 h-4" />;
   const localizedStatusLabel = STATUS_LABELS[issue.status]?.[activeLanguage] || issue.status;
 
+  const [verificationState, setVerificationState] = useState(() => 
+    issueVerificationService.getComputedState(issue.id, issue.title)
+  );
+
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.issueId === issue.id) {
+        setVerificationState(issueVerificationService.getComputedState(issue.id, issue.title));
+      }
+    };
+    window.addEventListener("issue_verifications_changed", handleSync);
+    return () => window.removeEventListener("issue_verifications_changed", handleSync);
+  }, [issue.id, issue.title]);
+
+  const { confirmations, disagreements, confidence, isVerified } = verificationState;
+
   return (
     <div 
       className="group bg-card rounded-2xl border border-border shadow-card hover:shadow-lg hover:-translate-y-1 transition-all overflow-hidden animate-slide-up cursor-pointer"
@@ -574,18 +726,30 @@ function IssueCard({
               </Badge>
             </div>
           </div>
-          <div className={`status-badge ${config.class}`}>
-            {config.icon}
-            {localizedStatusLabel}
+          <div className="flex items-center gap-2">
+            {isVerified && (
+              <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-[10px] py-0.5 px-2 font-bold shrink-0">
+                ✓ {activeLanguage === "en" ? "Verified" : "सत्यापित"}
+              </Badge>
+            )}
+            <div className={`status-badge ${config.class}`}>
+              {config.icon}
+              {localizedStatusLabel}
+            </div>
           </div>
         </div>
 
         {/* Content */}
-        <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors line-clamp-2">
+        <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-2 text-left">
           {issue.title}
         </h3>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-3">
+          <span className="font-semibold text-foreground">{confidence}% {activeLanguage === "en" ? "Confidence" : "विश्वास"}</span>
+          <span>({confirmations} vs {disagreements})</span>
+        </div>
+
         {issue.location && (
-          <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
+          <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1 text-left">
             <MapPin className="w-3 h-3 shrink-0" />
             <span className="truncate">{issue.location}</span>
           </p>

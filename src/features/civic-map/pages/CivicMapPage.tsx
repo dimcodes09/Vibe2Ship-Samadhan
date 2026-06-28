@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { issueService } from "@/features/issues/services/issueService";
 import { aiInsightService } from "@/features/issues/services/aiInsightService";
+import { issueVerificationService } from "@/features/issues/services/issueVerificationService";
 import { Issue } from "@/shared/types/domain/Issue";
 import { IssueStatus } from "@/shared/types/domain/IssueStatus";
 import { useLanguage } from "@/app/providers/LanguageProvider";
@@ -250,6 +251,19 @@ function buildPopupHtml(issue: Issue, language: "en" | "hi"): string {
 
   // Synchronous rule-based getSyncInsight() for popup details to avoid Gemini network requests
   const insight = aiInsightService.getSyncInsight(issue);
+
+  // Fetch community verification data using the unified getComputedState helper
+  const { confirmations, disagreements, confidence, isVerified } = 
+    issueVerificationService.getComputedState(issue.id, issue.title);
+
+  const verificationBadgeHtml = isVerified
+    ? `<span style="
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;
+        color: #22c55e; border: 1.5px solid rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.1);
+      ">✓ Verified</span>`
+    : "";
   
   const severityColors = {
     low: "#22c55e",
@@ -296,6 +310,7 @@ function buildPopupHtml(issue: Issue, language: "en" | "hi"): string {
           <span style="width: 6px; height: 6px; border-radius: 50%; background: ${statusColor}; display: inline-block;"></span>
           ${statusLabel}
         </span>
+        ${verificationBadgeHtml}
       </div>
       
       <p style="font-weight: 700; font-size: 13px; margin: 0 0 6px; line-height: 1.35; color: inherit;">
@@ -313,6 +328,10 @@ function buildPopupHtml(issue: Issue, language: "en" | "hi"): string {
         <div style="display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center;">
           <span style="color: #666; font-weight: 600;">🤖 AI Severity:</span>
           <span style="color: ${severityColor}; font-weight: 700; font-size: 10.5px;">${severityLabel}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center;">
+          <span style="color: #666; font-weight: 600;">👥 Confidence:</span>
+          <span style="color: #333; font-weight: 700;">${confidence}% (${confirmations} vs ${disagreements})</span>
         </div>
         <div style="display: flex; flex-direction: column;">
           <span style="color: #666; font-weight: 600; margin-bottom: 2px;">🏢 Department:</span>
@@ -357,6 +376,15 @@ export default function CivicMapPage() {
   const markersRef = useRef<L.LayerGroup | null>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
   const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const [verificationVersion, setVerificationVersion] = useState(0);
+
+  useEffect(() => {
+    const handleSync = () => {
+      setVerificationVersion((v) => v + 1);
+    };
+    window.addEventListener("issue_verifications_changed", handleSync);
+    return () => window.removeEventListener("issue_verifications_changed", handleSync);
+  }, []);
 
   // Data
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
@@ -695,6 +723,16 @@ export default function CivicMapPage() {
     
     setMarkersInitialized(true);
   }, [filtered, language, autoOpenId]);
+
+  // -- Update marker popups reactively when verification votes change -------
+  useEffect(() => {
+    markersMapRef.current.forEach((marker, issueId) => {
+      const issue = allIssues.find((i) => i.id === issueId);
+      if (issue && typeof marker.setPopupContent === "function") {
+        marker.setPopupContent(buildPopupHtml(issue, language));
+      }
+    });
+  }, [verificationVersion, language, allIssues]);
 
   // -- Trigger map resize when panel width changes ---------------------------
   useEffect(() => {
