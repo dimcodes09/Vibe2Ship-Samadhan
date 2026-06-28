@@ -104,29 +104,6 @@ export function AnalyticsPanel({ issues }: AnalyticsPanelProps) {
         </div>
       </div>
 
-      {/* Weekly Summary & AI Insights Card */}
-      <div className="bg-card rounded-2xl border border-border shadow-card p-6 bg-gradient-to-br from-card via-muted/5 to-card relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
-            {language === "en" ? "Smart Civic Summary" : "स्मार्ट नागरिक विवरण"}
-          </h3>
-        </div>
-        <p 
-          className="text-sm text-foreground leading-relaxed mb-4 whitespace-pre-wrap text-left"
-          dangerouslySetInnerHTML={parseBoldText(language === "en" ? analytics.weeklySummary.summaryTextEn : analytics.weeklySummary.summaryTextHi)}
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/40 text-left">
-          {(language === "en" ? analytics.weeklySummary.insightsEn : analytics.weeklySummary.insightsHi).map((insight, idx) => (
-            <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground text-left">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-              <span dangerouslySetInnerHTML={parseBoldText(insight)} />
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Row 1: Category Donut + Status Bar */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* ── Category Donut ───────────────────────────────────────────────── */}
@@ -262,6 +239,29 @@ export function AnalyticsPanel({ issues }: AnalyticsPanelProps) {
             />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* Weekly Summary & AI Insights Card */}
+      <div className="bg-card rounded-2xl border border-border shadow-card p-6 bg-gradient-to-br from-card via-muted/5 to-card relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+          <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
+            {language === "en" ? "Smart Civic Summary" : "स्मार्ट नागरिक विवरण"}
+          </h3>
+        </div>
+        <p 
+          className="text-sm text-foreground leading-relaxed mb-4 whitespace-pre-wrap text-left"
+          dangerouslySetInnerHTML={parseBoldText(language === "en" ? analytics.weeklySummary.summaryTextEn : analytics.weeklySummary.summaryTextHi)}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t border-border/40 text-left">
+          {(language === "en" ? analytics.weeklySummary.insightsEn : analytics.weeklySummary.insightsHi).map((insight, idx) => (
+            <div key={idx} className="flex items-start gap-2 text-xs text-muted-foreground text-left">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+              <span dangerouslySetInnerHTML={parseBoldText(insight)} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Row 3: Enhanced Top Affected Cities + Department Leaderboard */}

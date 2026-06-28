@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { useLanguage } from "@/app/providers/LanguageProvider";
-import { useAuth } from "@/features/auth";
 import { ROUTES } from "@/shared/config/routes";
 import { 
   MapPin, 
@@ -13,32 +11,11 @@ import {
   Users,
   Clock,
   Trophy,
-  Flame,
-  FolderLock,
-  Award,
-  Compass,
-  ShieldAlert,
-  BadgeCheck
+  FolderLock
 } from "lucide-react";
-import { issueRepository, issueService } from "@/features/issues";
-import { profileService } from "@/features/profile/services/profileService";
-import { gamificationService } from "@/features/profile/services/gamificationService";
-import { documentRepository } from "@/features/documents/repositories/documentRepository";
-import { schemeRepository } from "@/features/schemes/repositories/schemeRepository";
-import { Issue } from "@/shared/types/domain/Issue";
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Award,
-  Sparkles: Trophy,
-  Flame,
-  User: Trophy,
-  Compass,
-  ShieldAlert,
-  BadgeCheck,
-};
 
 export function HeroSection() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const stats = [
     { value: "50K+", labelKey: "hero.issuesResolved", icon: CheckCircle2 },
@@ -94,7 +71,7 @@ export function HeroSection() {
           </div>
 
           {/* Quick Action Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto mb-16">
             <QuickActionCard
               icon={<MapPin className="w-6 h-6" />}
               title={t("hero.issuesNearYou")}
@@ -103,18 +80,33 @@ export function HeroSection() {
               delay="0.3s"
             />
             <QuickActionCard
-              icon={<FileText className="w-6 h-6" />}
-              title={t("hero.formAnalyzer")}
-              description={t("hero.formDesc")}
-              href="/analyzer"
-              delay="0.4s"
-            />
-            <QuickActionCard
               icon={<Shield className="w-6 h-6" />}
               title={t("hero.verifiedSchemes")}
               description={t("hero.schemesDesc")}
               href="/schemes"
+              delay="0.4s"
+            />
+            <QuickActionCard
+              icon={<Trophy className="w-6 h-6" />}
+              title={language === "en" ? "Community Hero" : "सामुदायिक नायक"}
+              description={
+                language === "en"
+                  ? "View your level, achievements, and community rank."
+                  : "अपना स्तर, उपलब्धियां और सामुदायिक रैंक देखें।"
+              }
+              href="/profile"
               delay="0.5s"
+            />
+            <QuickActionCard
+              icon={<FolderLock className="w-6 h-6" />}
+              title={language === "en" ? "Smart Document Locker" : "स्मार्ट दस्तावेज़ लॉकर"}
+              description={
+                language === "en"
+                  ? "Securely upload, verify, and manage your civic documents."
+                  : "अपने नागरिक दस्तावेजों को सुरक्षित रूप से अपलोड, सत्यापित और प्रबंधित करें।"
+              }
+              href="/documents"
+              delay="0.6s"
             />
           </div>
 
@@ -155,14 +147,16 @@ function QuickActionCard({
   return (
     <Link
       to={href}
-      className="group glass-card p-6 rounded-2xl text-left hover:shadow-xl hover:-translate-y-1 transition-all animate-slide-up"
+      className="group glass-card p-6 rounded-2xl text-left hover:shadow-xl hover:-translate-y-1 transition-all animate-slide-up flex flex-col justify-between"
       style={{ animationDelay: delay }}
     >
-      <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-        {icon}
+      <div>
+        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+          {icon}
+        </div>
+        <h3 className="font-semibold text-foreground mb-1 leading-snug">{title}</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
       </div>
-      <h3 className="font-semibold text-foreground mb-1">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
     </Link>
   );
 }
